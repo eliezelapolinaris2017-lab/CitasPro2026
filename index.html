@@ -7,15 +7,18 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="bg">
-  <!-- Encabezado con logo y nombre -->
   <header class="topbar">
-    <img id="brandLogo" class="logo" src="assets/default-logo.svg" alt="logo" />
-    <h1>CitasPro</h1>
+    <div class="brand">
+      <img id="brandLogo" class="logo" src="assets/default-logo.svg" alt="logo" />
+      <h1>CitasPro</h1>
+    </div>
+    <nav class="top-actions">
+      <a class="btn" href="settings.html">Configuración</a>
+    </nav>
   </header>
 
-  <!-- Tarjeta central con formulario -->
   <main class="card auth">
-    <div class="avatar" id="heroAvatar"></div>
+    <div class="avatar"></div>
     <h2>Bienvenido</h2>
     <p class="muted">Ingresa con tu cuenta de administrador</p>
 
@@ -30,27 +33,21 @@
     <a class="btn ghost" href="vip.html">Ir a Auto-agenda VIP</a>
   </main>
 
-  <!-- Pie de página -->
   <footer class="foot">© <span id="year"></span> CitasPro</footer>
 
-  <!-- Conexión con scripts -->
   <script src="storage.js"></script>
   <script>
-    // Actualiza el año dinámicamente
     document.getElementById('year').textContent = new Date().getFullYear();
+    Storage.bootstrapUI();
 
     const form = document.getElementById('loginForm');
-
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const email = document.getElementById('email').value.trim();
-      const pass = document.getElementById('password').value.trim();
+      const pass  = document.getElementById('password').value.trim();
       const ok = await Storage.login(email, pass);
-      if (ok) {
-        location.href = 'dashboard.html';
-      } else {
-        alert('Credenciales inválidas. Usa admin@example.com / admin');
-      }
+      if(ok){ location.href='dashboard.html'; }
+      else { alert('Credenciales inválidas. Usa admin@example.com / admin'); }
     });
   </script>
 </body>
