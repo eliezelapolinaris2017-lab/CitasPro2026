@@ -73,5 +73,18 @@ input, select, textarea{ width:100%; }
   background: var(--brand);
   color: #fff;
 }
+/* Navegación del calendario */
+.cal-header{
+  display:flex; align-items:center; justify-content:center;
+  gap:12px; margin:6px 0 12px;
+}
+.cal-label{ font-weight:600; }
+.calendar .day{ position:relative; }
+.calendar .day.dim{ opacity:.5; }
+.cal-badge{
+  position:absolute; top:6px; right:6px; font-size:11px;
+  padding:2px 6px; line-height:1.2; border-radius:999px;
+  background:var(--brand); color:#fff;
+}
 
 
