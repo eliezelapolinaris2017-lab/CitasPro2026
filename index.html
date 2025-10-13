@@ -3,55 +3,107 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CitasPro — Ingresar</title>
+  <title>CitasPro — Auto-agenda VIP</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="bg">
-  <!-- Encabezado con logo y nombre -->
   <header class="topbar">
-    <img id="brandLogo" class="logo" src="assets/default-logo.svg" alt="logo" />
-    <h1>CitasPro</h1>
+    <div class="brand">
+      <img id="brandLogo" class="logo" src="assets/default-logo.svg" alt="logo" />
+      <div>
+        <h1 id="brandTitle">CitasPro</h1>
+        <small class="muted">Auto-agenda VIP</small>
+      </div>
+    </div>
+    <nav class="top-actions">
+      <a class="btn" href="index.html">Volver</a>
+    </nav>
   </header>
 
-  <!-- Tarjeta central con formulario -->
-  <main class="card auth">
-    <div class="avatar" id="heroAvatar"></div>
-    <h2>Bienvenido</h2>
-    <p class="muted">Ingresa con tu cuenta de administrador</p>
+  <main class="card">
+    <h2>Auto-agenda VIP</h2>
+    <p class="muted">Selecciona fecha y hora disponibles</p>
 
-    <form id="loginForm" class="stack">
-      <input id="email" type="email" placeholder="Email" required>
-      <input id="password" type="password" placeholder="Contraseña" required>
-      <button type="submit" class="btn primary">Login</button>
+    <div id="calendar" class="calendar" aria-label="Calendario de reservas"></div>
+
+    <form id="vipForm" class="stack" style="max-width:520px;margin:auto;">
+      <input id="vipName" placeholder="Tu nombre" required>
+      <input id="vipPhone" placeholder="WhatsApp (con código de país)" required>
+      <input id="vipService" placeholder="Servicio" required>
+      <select id="vipDuration">
+        <option value="60">60 min</option>
+        <option value="90">90 min</option>
+      </select>
+      <input id="vipDate" type="date" required>
+      <input id="vipTime" type="time" required>
+      <button class="btn primary" type="submit">Reservar</button>
     </form>
 
-    <hr>
-    <p class="muted">¿Eres cliente VIP? Usa tu enlace directo:</p>
-    <a class="btn ghost" href="vip.html">Ir a Auto-agenda VIP</a>
+    <div id="vipMsg" class="muted" style="text-align:center;margin-top:8px"></div>
   </main>
 
-  <!-- Pie de página -->
-  <footer class="foot">© <span id="year"></span> CitasPro</footer>
+  <footer class="foot">Hecho con ❤ — CitasPro</footer>
 
-  <!-- Conexión con scripts -->
+  <!-- Scripts -->
   <script src="storage.js"></script>
+  <script src="calendar.js"></script>
   <script>
-    // Actualiza el año dinámicamente
-    document.getElementById('year').textContent = new Date().getFullYear();
+  (function(){
+    // Aplica branding guardado (color, logo, fondo)
+    Storage.bootstrapUI();
 
-    const form = document.getElementById('loginForm');
+    // Validar token VIP del enlace (?t=TOKEN)
+    const q = new URLSearchParams(location.search);
+    const token = q.get('t');
+    if(!Storage.validateVip(token)){
+      document.body.innerHTML = '<main class="card"><h2>Enlace inválido</h2><p>Pide un enlace válido a tu negocio.</p><p><a class="btn" href="index.html">Ir al inicio</a></p></main>';
+      return;
+    }
 
-    form.addEventListener('submit', async (e) => {
+    // Renderizar calendario con contador de citas por día
+    const cal = document.getElementById('calendar');
+    let selected = new Date();
+    function drawCalendar(){
+      renderCalendar(
+        cal,
+        selected,
+        (d)=>{ selected=d; const vipDate=document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate=d; },
+        (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length
+      );
+    }
+    drawCalendar();
+
+    // Preseleccionar fecha de hoy
+    const vipDate = document.getElementById('vipDate'); 
+    if(vipDate) vipDate.valueAsDate = selected;
+
+    // Envío de reserva VIP
+    const form = document.getElementById('vipForm');
+    const msgBox = document.getElementById('vipMsg');
+
+    form.addEventListener('submit', (e)=>{
       e.preventDefault();
-      const email = document.getElementById('email').value.trim();
-      const pass = document.getElementById('password').value.trim();
-      const ok = await Storage.login(email, pass);
-      if (ok) {
-        location.href = 'dashboard.html';
-      } else {
-        alert('Credenciales inválidas. Usa admin@example.com / admin');
-      }
+      const appt = {
+        name: document.getElementById('vipName').value.trim(),
+        phone: document.getElementById('vipPhone').value.trim(),
+        service: document.getElementById('vipService').value.trim(),
+        date: (document.getElementById('vipDate').value || '').slice(0,10),
+        time: (document.getElementById('vipTime').value || '').slice(0,5),
+        duration: Number(document.getElementById('vipDuration').value||60),
+        price: 0,
+        source: 'vip'
+      };
+
+      // Guardar y confirmar
+      Storage.saveAppointment(appt);
+      if(msgBox) msgBox.textContent = '¡Listo! Tu cita quedó registrada.';
+      form.reset();
+
+      // Redibujar calendario para ver el contador actualizado
+      drawCalendar();
     });
+  })();
   </script>
 </body>
 </html>
+
