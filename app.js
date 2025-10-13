@@ -1,5 +1,12 @@
 (function(){
-  // Aplica logo, fondo y color apenas carga
+  // ===== Helpers =====
+  function fmtDateShort(iso){ 
+    // iso: YYYY-MM-DD -> DD/MM/YY
+    if(!iso || iso.length < 10) return iso || '';
+    const [y,m,d] = iso.slice(0,10).split('-');
+    return `${d}/${m}/${y.slice(2)}`;
+  }
+
   document.addEventListener('DOMContentLoaded', ()=> {
     Storage.bootstrapUI();
     wireLoginDemo();
@@ -123,14 +130,17 @@
       const today = all.filter(a => a.date === dd);
 
       if(dayList){
-        dayList.innerHTML = today.map(renderItem).join('') || '<p class="muted">No hay citas.</p>';
+        // Lista del día: solo hora
+        dayList.innerHTML = today.map(renderItemDay).join('') || '<p class="muted">No hay citas.</p>';
       }
       if(allList){
-        allList.innerHTML = all.map(renderItem).join('') || '<p class="muted">Aún sin citas.</p>';
+        // Mis Citas (todas): fecha corta + hora
+        allList.innerHTML = all.map(renderItemAll).join('') || '<p class="muted">Aún sin citas.</p>';
       }
     }
 
-    function renderItem(a){
+    function renderItemDay(a){
+      // Para el panel del día mostramos solo la hora
       const msg = Storage.getWhatsAppTemplate()
         .replace('{{nombre}}', a.name)
         .replace('{{fecha}}', a.date)
@@ -143,9 +153,26 @@
           <strong>${a.time}</strong> — ${a.name} · ${a.service}
           <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
         </div>
-        <div class="row">
-          <a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a>
+        <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
+      </div>`;
+    }
+
+    function renderItemAll(a){
+      // En "Mis Citas": fecha corta + hora (DD/MM/YY HH:MM)
+      const msg = Storage.getWhatsAppTemplate()
+        .replace('{{nombre}}', a.name)
+        .replace('{{fecha}}', a.date)
+        .replace('{{hora}}', a.time)
+        .replace('{{servicio}}', a.service)
+        .replace('{{precio}}', a.price);
+      const wa = `https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
+      const fechaHora = `${fmtDateShort(a.date)} ${a.time}`;
+      return `<div class="item">
+        <div>
+          <strong>${fechaHora}</strong> — ${a.name} · ${a.service}
+          <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
         </div>
+        <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
       </div>`;
     }
 
