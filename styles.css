@@ -59,3 +59,19 @@ input, select, textarea{ width:100%; }
 /* Responsive */
 @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
 
+/* ==== Badges de citas en calendario ==== */
+.calendar .day { position: relative; }
+.calendar .day.dim { opacity: 0.5; }
+.cal-badge{
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 11px;
+  padding: 2px 6px;
+  line-height: 1.2;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+}
+
+
