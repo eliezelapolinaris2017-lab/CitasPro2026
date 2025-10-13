@@ -101,9 +101,18 @@
     let selected = new Date();
     if(dateEl) dateEl.valueAsDate = selected;
 
-    if(cal){
-      renderCalendar(cal, selected, (d)=>{ selected = d; if(dateEl){ dateEl.valueAsDate = d; } refreshLists(); });
+    // Dibuja calendario con contador de citas por día
+    function drawCalendar(){
+      if(!cal) return;
+      const getCount = (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length;
+      renderCalendar(
+        cal,
+        selected,
+        (d)=>{ selected = d; if(dateEl){ dateEl.valueAsDate = d; } refreshLists(); drawCalendar(); }, // al seleccionar, refresca y redibuja
+        getCount
+      );
     }
+    drawCalendar();
 
     if(appointmentForm){
       appointmentForm.addEventListener('submit', (e)=>{
@@ -122,6 +131,7 @@
         appointmentForm.reset();
         if(dateEl) dateEl.valueAsDate = selected;
         refreshLists();
+        drawCalendar(); // <- redibuja para actualizar badges
       });
     }
 
@@ -141,10 +151,9 @@
     }
 
     function renderItemDay(a){
-      // Para el panel del día mostramos solo la hora
       const msg = Storage.getWhatsAppTemplate()
         .replace('{{nombre}}', a.name)
-        .replace('{{fecha}}', a.date) // puedes cambiar a fmtDateShort(a.date) si quieres
+        .replace('{{fecha}}', a.date)
         .replace('{{hora}}', a.time)
         .replace('{{servicio}}', a.service)
         .replace('{{precio}}', a.price);
@@ -159,10 +168,9 @@
     }
 
     function renderItemAll(a){
-      // En "Mis Citas": fecha corta + hora (DD/MM/YY HH:MM)
       const msg = Storage.getWhatsAppTemplate()
         .replace('{{nombre}}', a.name)
-        .replace('{{fecha}}', a.date) // puedes cambiar a fmtDateShort(a.date) si quieres que el WA también vaya corto
+        .replace('{{fecha}}', a.date) // cámbialo por fmtDateShort(a.date) si quieres fecha corta en el texto de WA
         .replace('{{hora}}', a.time)
         .replace('{{servicio}}', a.service)
         .replace('{{precio}}', a.price);
@@ -194,7 +202,9 @@
 
     const cal = document.getElementById('calendar');
     let selected = new Date();
-    renderCalendar(cal, selected, (d)=>{ selected = d; const vipDate = document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate = d; });
+    renderCalendar(cal, selected, (d)=>{ selected = d; const vipDate = document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate = d; }, 
+      (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length
+    );
     const vipDate = document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate = selected;
 
     const form = document.getElementById('vipForm');
@@ -221,6 +231,10 @@
       const msg = document.getElementById('vipMsg');
       if(msg) msg.textContent = '¡Listo! Tu cita quedó registrada.';
       form.reset();
+      // Opcional: redibujar calendario VIP para ver el contador
+      renderCalendar(cal, selected, (d)=>{ selected=d; const vd=document.getElementById('vipDate'); if(vd) vd.valueAsDate=d; }, 
+        (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length
+      );
     });
   }
 })();
