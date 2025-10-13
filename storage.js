@@ -21,7 +21,7 @@ const Storage = {
 
   ensureDemoAdmin(){
     const db = this._db();
-    if(!db.user) db.user = { email: 'admin@example.com', pass: 'admin' };
+    if(!db.user) db.user = { email: 'admineliezel1', pass: 'admin' };
     this._save(db);
   },
 
