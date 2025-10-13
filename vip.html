@@ -44,15 +44,11 @@
 
   <footer class="foot">Hecho con ❤ — CitasPro</footer>
 
-  <!-- Scripts -->
   <script src="storage.js"></script>
   <script src="calendar.js"></script>
   <script>
   (function(){
-    // Aplica branding guardado (color, logo, fondo)
     Storage.bootstrapUI();
-
-    // Validar token VIP del enlace (?t=TOKEN)
     const q = new URLSearchParams(location.search);
     const token = q.get('t');
     if(!Storage.validateVip(token)){
@@ -60,9 +56,9 @@
       return;
     }
 
-    // Renderizar calendario con contador de citas por día
     const cal = document.getElementById('calendar');
     let selected = new Date();
+
     function drawCalendar(){
       renderCalendar(
         cal,
@@ -72,12 +68,9 @@
       );
     }
     drawCalendar();
-
-    // Preseleccionar fecha de hoy
     const vipDate = document.getElementById('vipDate'); 
     if(vipDate) vipDate.valueAsDate = selected;
 
-    // Envío de reserva VIP
     const form = document.getElementById('vipForm');
     const msgBox = document.getElementById('vipMsg');
 
@@ -93,13 +86,9 @@
         price: 0,
         source: 'vip'
       };
-
-      // Guardar y confirmar
       Storage.saveAppointment(appt);
       if(msgBox) msgBox.textContent = '¡Listo! Tu cita quedó registrada.';
       form.reset();
-
-      // Redibujar calendario para ver el contador actualizado
       drawCalendar();
     });
   })();
