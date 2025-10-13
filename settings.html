@@ -22,19 +22,33 @@
 
   <main class="card">
     <div class="stack">
-      <label>Color principal <input id="themeColor" type="color" value="#ff4d5a"></label>
-      <label>Logo <input id="logoInput" type="file" accept="image/*"></label>
-      <label>Fondo <input id="bgInput" type="file" accept="image/*"></label>
+      <label>Color principal 
+        <input id="themeColor" type="color" value="#ff4d5a">
+      </label>
+      <label>Logo 
+        <input id="logoInput" type="file" accept="image/*">
+      </label>
+      <label>Fondo 
+        <input id="bgInput" type="file" accept="image/*">
+      </label>
       <label>Mensaje WhatsApp prellenado
         <textarea id="waTemplate" rows="4" placeholder="Hola {{nombre}}, tu cita es el {{fecha}} a las {{hora}} por {{servicio}}. Precio: ${{precio}}."></textarea>
       </label>
+
       <label>Enlace VIP (token)
         <div class="row">
           <input id="vipToken" placeholder="Token" readonly>
           <button id="btnGenVip" class="btn">Generar</button>
         </div>
       </label>
-      <button id="btnShareVip" class="btn ghost">Copiar enlace VIP</button>
+
+      <div class="row">
+        <button id="btnShareVip" class="btn ghost">Copiar enlace VIP</button>
+      </div>
+
+      <div class="row">
+        <small id="vipLinkPreview" class="muted" style="word-break:break-all"></small>
+      </div>
     </div>
   </main>
 
@@ -44,3 +58,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+
