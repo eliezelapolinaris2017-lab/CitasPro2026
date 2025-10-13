@@ -1,57 +1,57 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>CitasPro — Ingresar</title>
-<link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CitasPro — Ingresar</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="bg">
-<header class="topbar">
-<img id="brandLogo" class="logo" src="assets/default-logo.svg" alt="logo" />
-<h1>CitasPro</h1>
-</header>
-<main class="card auth">
-<div class="avatar" id="heroAvatar"></div>
-<h2>Bienvenido</h2>
-<p class="muted">Ingresa como <b>admin</b> o crea tu cuenta</p>
+  <!-- Encabezado con logo y nombre -->
+  <header class="topbar">
+    <img id="brandLogo" class="logo" src="assets/default-logo.svg" alt="logo" />
+    <h1>CitasPro</h1>
+  </header>
 
+  <!-- Tarjeta central con formulario -->
+  <main class="card auth">
+    <div class="avatar" id="heroAvatar"></div>
+    <h2>Bienvenido</h2>
+    <p class="muted">Ingresa con tu cuenta de administrador</p>
 
-<form id="loginForm" class="stack">
-<input id="email" type="email" placeholder="Email" required>
-<input id="password" type="password" placeholder="Contraseña" required>
-<button type="submit" class="btn primary">Login</button>
+    <form id="loginForm" class="stack">
+      <input id="email" type="email" placeholder="Email" required>
+      <input id="password" type="password" placeholder="Contraseña" required>
+      <button type="submit" class="btn primary">Login</button>
+    </form>
 
-</form>
+    <hr>
+    <p class="muted">¿Eres cliente VIP? Usa tu enlace directo:</p>
+    <a class="btn ghost" href="vip.html">Ir a Auto-agenda VIP</a>
+  </main>
 
+  <!-- Pie de página -->
+  <footer class="foot">© <span id="year"></span> CitasPro</footer>
 
-<hr>
-<p class="muted">¿Eres cliente VIP? Usa tu enlace directo:</p>
+  <!-- Conexión con scripts -->
+  <script src="storage.js"></script>
+  <script>
+    // Actualiza el año dinámicamente
+    document.getElementById('year').textContent = new Date().getFullYear();
 
-</main>
+    const form = document.getElementById('loginForm');
 
-
-<footer class="foot">© <span id="year"></span> CitasPro</footer>
-<script src="storage.js"></script>
-<script>
-document.getElementById('year').textContent = new Date().getFullYear();
-const form = document.getElementById('loginForm');
-form.addEventListener('submit', async (e)=>{
-e.preventDefault();
-const email = emailInput.value.trim();
-const pass = password.value.trim();
-const ok = await Storage.login(email, pass);
-if(ok){
-location.href = 'dashboard.html';
-}else{
-alert('Credenciales inválidas');
-}
-});
-btnDemo.onclick = ()=>{
-Storage.ensureDemoAdmin();
-location.href='dashboard.html';
-}
-const emailInput = document.getElementById('email');
-</script>
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      const ok = await Storage.login(email, pass);
+      if (ok) {
+        location.href = 'dashboard.html';
+      } else {
+        alert('Credenciales inválidas. Usa admin@example.com / admin');
+      }
+    });
+  </script>
 </body>
 </html>
