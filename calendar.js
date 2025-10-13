@@ -1,7 +1,7 @@
 // Calendario con badges de cantidad de citas por día
 // renderCalendar(container, displayDate, onPick, getCount, selectedDateForHighlight?)
 // - displayDate: Date que define el mes visible
-// - selectedDateForHighlight: Date a resaltar (puede ser de ese mes o no)
+// - selectedDateForHighlight: Date a resaltar
 function renderCalendar(container, displayDate, onPick, getCount, selectedDateForHighlight){
   const root = (typeof container === 'string') ? document.getElementById(container) : container;
   if(!root) return;
@@ -12,7 +12,7 @@ function renderCalendar(container, displayDate, onPick, getCount, selectedDateFo
   const month = d.getMonth();
 
   const first = new Date(year, month, 1);
-  const start = new Date(first); 
+  const start = new Date(first);
   start.setDate(first.getDate() - ((first.getDay()+6)%7)); // lunes
 
   const days = ['L','M','X','J','V','S','D'];
@@ -33,13 +33,10 @@ function renderCalendar(container, displayDate, onPick, getCount, selectedDateFo
 
     if(cur.toDateString() === new Date().toDateString()) div.classList.add('today');
     if(cur.getMonth() !== month) div.classList.add('dim');
-
-    // Resaltado del seleccionado (si pertenece al mes visible)
     if(selectedDateForHighlight && cur.toDateString() === new Date(selectedDateForHighlight).toDateString()){
       div.classList.add('selected');
     }
 
-    // Badge de citas
     const ymd = cur.toISOString().slice(0,10);
     try{
       const n = typeof getCount === 'function' ? (getCount(ymd)|0) : 0;
