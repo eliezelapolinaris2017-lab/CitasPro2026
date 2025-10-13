@@ -81,10 +81,17 @@ const Storage = {
   },
 
   getWhatsAppTemplate(){ return this._db().settings.wa; },
+
+  // 🔒 Persistencia robusta del mensaje WA (se guarda y mantiene siempre)
   setWhatsAppTemplate(t){
     const db = this._db();
-    db.settings.wa = t || '';
+    db.settings.wa = t && t.trim()
+      ? t
+      : 'Hola {{nombre}}, tu cita es el {{fecha}} a las {{hora}} por {{servicio}}. Precio: ${{precio}}.';
     this._save(db);
+    // Si el textarea está en pantalla, sincroniza su valor
+    const el = document.getElementById('waTemplate');
+    if(el && el.value !== db.settings.wa) el.value = db.settings.wa;
   },
 
   ensureVipToken(){
