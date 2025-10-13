@@ -50,11 +50,12 @@
       themeColor.oninput = ()=> Storage.setThemeColor(themeColor.value);
     }
 
-    // WhatsApp template
+    // WhatsApp template (persistente)
     const waTemplate = document.getElementById('waTemplate');
     if(waTemplate){
       waTemplate.value = Storage.getWhatsAppTemplate();
-      waTemplate.oninput = ()=> Storage.setWhatsAppTemplate(waTemplate.value);
+      waTemplate.addEventListener('input', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
+      waTemplate.addEventListener('change', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
     }
 
     // VIP token
@@ -143,7 +144,7 @@
       // Para el panel del día mostramos solo la hora
       const msg = Storage.getWhatsAppTemplate()
         .replace('{{nombre}}', a.name)
-        .replace('{{fecha}}', a.date)
+        .replace('{{fecha}}', a.date) // puedes cambiar a fmtDateShort(a.date) si quieres
         .replace('{{hora}}', a.time)
         .replace('{{servicio}}', a.service)
         .replace('{{precio}}', a.price);
@@ -161,7 +162,7 @@
       // En "Mis Citas": fecha corta + hora (DD/MM/YY HH:MM)
       const msg = Storage.getWhatsAppTemplate()
         .replace('{{nombre}}', a.name)
-        .replace('{{fecha}}', a.date)
+        .replace('{{fecha}}', a.date) // puedes cambiar a fmtDateShort(a.date) si quieres que el WA también vaya corto
         .replace('{{hora}}', a.time)
         .replace('{{servicio}}', a.service)
         .replace('{{precio}}', a.price);
