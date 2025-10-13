@@ -1,60 +1,136 @@
 const Storage = {
-isBackend: false, // cambia a true si montas el backend Java y ajusta BASE_URL
-BASE_URL: 'http://localhost:4567',
+  key: 'citaspro.db',
+  isBackend: false, // pon true si usas el backend Java
+  BASE_URL: 'http://localhost:4567',
 
+  // ---------- núcleo ----------
+  _db(){
+    const db = JSON.parse(localStorage.getItem(this.key) || '{}');
+    // compat y defaults
+    db.user = db.user || { email: 'admin@example.com', pass: 'admin' };
+    db.appointments = db.appointments || [];
+    db.settings = db.settings || {};
+    db.settings.themeColor = db.settings.themeColor || db.themeColor || '#ff4d5a';
+    db.settings.wa = db.settings.wa || db.wa || 'Hola {{nombre}}, tu cita es el {{fecha}} a las {{hora}} por {{servicio}}. Precio: ${{precio}}.';
+    db.settings.logo = db.settings.logo || db.logo || null;
+    db.settings.bg = db.settings.bg || db.bg || null;
+    db.settings.vipToken = db.settings.vipToken || (db.vip && db.vip.token) || null;
+    return db;
+  },
+  _save(db){ localStorage.setItem(this.key, JSON.stringify(db)); },
 
-async login(email, pass){
-if(this.isBackend){
-const r = await fetch(this.BASE_URL+'/api/login',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, pass})});
-return r.ok;
-} else {
-const db = JSON.parse(localStorage.getItem('citaspro.db')||'{}');
-const user = db.user || {email:'admin@example.com', pass:'admin'};
-return (email===user.email && pass===user.pass);
-}
-},
+  ensureDemoAdmin(){
+    const db = this._db();
+    if(!db.user) db.user = { email: 'admin@example.com', pass: 'admin' };
+    this._save(db);
+  },
 
+  // ---------- auth ----------
+  async login(email, pass){
+    if(this.isBackend){
+      const r = await fetch(this.BASE_URL+'/api/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email, pass})
+      });
+      return r.ok;
+    } else {
+      const db = this._db();
+      return email===db.user.email && pass===db.user.pass;
+    }
+  },
 
-ensureDemoAdmin(){
-const db = JSON.parse(localStorage.getItem('citaspro.db')||'{}');
-if(!db.user){ db.user={email:'admin@example.com', pass:'admin'}; localStorage.setItem('citaspro.db', JSON.stringify(db)); }
-},
+  // ---------- citas ----------
+  saveAppointment(appt){
+    const db = this._db();
+    appt.id = crypto.randomUUID();
+    // normaliza fecha/hora a formatos consistentes
+    appt.date = (appt.date || '').slice(0,10);
+    appt.time = (appt.time || '').slice(0,5);
+    db.appointments.push(appt);
+    this._save(db);
+    return appt;
+  },
+  listAppointments(){
+    const db = this._db();
+    return db.appointments.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  },
 
+  // ---------- settings: tema / logo / fondo / whatsapp ----------
+  getThemeColor(){ return this._db().settings.themeColor; },
+  setThemeColor(hex){
+    const db = this._db();
+    db.settings.themeColor = hex;
+    this._save(db);
+    this.applyBranding(); // aplica al vuelo
+  },
 
-saveAppointment(appt){
-const db = JSON.parse(localStorage.getItem('citaspro.db')||'{}');
-db.appointments = db.appointments || [];
-appt.id = crypto.randomUUID();
-db.appointments.push(appt);
-localStorage.setItem('citaspro.db', JSON.stringify(db));
-return appt;
-},
-listAppointments(){
-const db = JSON.parse(localStorage.getItem('citaspro.db')||'{}');
-return db.appointments||[];
-},
+  getLogo(){ return this._db().settings.logo || null; },
+  setLogo(dataUrl){
+    const db = this._db();
+    db.settings.logo = dataUrl;
+    this._save(db);
+    this.applyBranding();
+  },
 
+  getBackground(){ return this._db().settings.bg || null; },
+  setBackground(dataUrl){
+    const db = this._db();
+    db.settings.bg = dataUrl;
+    this._save(db);
+    this.applyBranding();
+  },
 
-setThemeColor(hex){ document.documentElement.style.setProperty('--brand', hex); const db=this._db(); db.themeColor=hex; this._save(db); },
-getThemeColor(){ return this._db().themeColor || '#ff4d5a'; },
+  getWhatsAppTemplate(){ return this._db().settings.wa; },
+  setWhatsAppTemplate(t){
+    const db = this._db();
+    db.settings.wa = t || '';
+    this._save(db);
+  },
 
+  ensureVipToken(){
+    const db = this._db();
+    if(!db.settings.vipToken){ db.settings.vipToken = crypto.randomUUID(); this._save(db); }
+    return db.settings.vipToken;
+  },
+  validateVip(token){
+    const db = this._db();
+    return !!token && token === db.settings.vipToken;
+  },
 
-setLogo(dataUrl){ const db=this._db(); db.logo=dataUrl; this._save(db); document.getElementById('brandLogo').src=dataUrl; },
-setBackground(dataUrl){ const db=this._db(); db.bg=dataUrl; this._save(db); document.body.style.backgroundImage=`url(${dataUrl})`; },
+  // ---------- UI helpers ----------
+  async fileToDataUrl(file){
+    return await new Promise(res => {
+      const fr = new FileReader();
+      fr.onload = ()=>res(fr.result);
+      fr.readAsDataURL(file);
+    });
+  },
 
+  applyBranding(){
+    const db = this._db();
+    // color
+    try { document.documentElement.style.setProperty('--brand', db.settings.themeColor || '#ff4d5a'); } catch(e){}
+    // logo
+    try {
+      const logoEl = document.getElementById('brandLogo');
+      if(logoEl && db.settings.logo){ logoEl.src = db.settings.logo; }
+    } catch(e){}
+    // fondo
+    try {
+      if(db.settings.bg){
+        document.body.style.backgroundImage = `url(${db.settings.bg})`;
+        document.body.style.backgroundSize = 'cover';
+        document.body.style.backgroundAttachment = 'fixed';
+      } else {
+        document.body.style.backgroundImage = '';
+      }
+    } catch(e){}
+  },
 
-getLogo(){ return this._db().logo; },
-getBackground(){ return this._db().bg; },
-
-
-setWhatsAppTemplate(t){ const db=this._db(); db.wa=t; this._save(db); },
-getWhatsAppTemplate(){ return this._db().wa || 'Hola {{nombre}}, tu cita es el {{fecha}} a las {{hora}} por {{servicio}}.'; },
-
-
-ensureVipToken(){ const db=this._db(); if(!db.vip){ db.vip={token: crypto.randomUUID()}; this._save(db);} return db.vip.token; },
-validateVip(token){ const db=this._db(); return token && db.vip && token===db.vip.token; },
-
-
-_db(){ return JSON.parse(localStorage.getItem('citaspro.db')||'{}'); },
-_save(db){ localStorage.setItem('citaspro.db', JSON.stringify(db)); }
+  bootstrapUI(){
+    // Llama esto en cada página al cargar para aplicar branding de inmediato
+    this.applyBranding();
+  }
 };
+
