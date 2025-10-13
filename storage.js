@@ -44,9 +44,8 @@ const Storage = {
   saveAppointment(appt){
     const db = this._db();
     appt.id = crypto.randomUUID();
-    // normaliza fecha/hora a formatos consistentes
-    appt.date = (appt.date || '').slice(0,10);
-    appt.time = (appt.time || '').slice(0,5);
+    appt.date = (appt.date || '').slice(0,10); // YYYY-MM-DD
+    appt.time = (appt.time || '').slice(0,5);  // HH:MM
     db.appointments.push(appt);
     this._save(db);
     return appt;
@@ -62,7 +61,7 @@ const Storage = {
     const db = this._db();
     db.settings.themeColor = hex;
     this._save(db);
-    this.applyBranding(); // aplica al vuelo
+    this.applyBranding();
   },
 
   getLogo(){ return this._db().settings.logo || null; },
@@ -129,8 +128,7 @@ const Storage = {
   },
 
   bootstrapUI(){
-    // Llama esto en cada página al cargar para aplicar branding de inmediato
-    this.applyBranding();
+    this.applyBranding(); // Llama esto al cargar cada página
   }
 };
 
