@@ -1,22 +1,19 @@
 // Calendario con badges de cantidad de citas por día
-// renderCalendar(container, selectedDate, onPick, getCount)
-// - container: elemento o id del contenedor
-// - selectedDate: Date inicial seleccionada
-// - onPick: callback(Date) cuando el usuario hace click en un día
-// - getCount: fn(yyyy-mm-dd) -> number de citas en ese día
-function renderCalendar(container, selectedDate, onPick, getCount){
+// renderCalendar(container, displayDate, onPick, getCount, selectedDateForHighlight?)
+// - displayDate: Date que define el mes visible
+// - selectedDateForHighlight: Date a resaltar (puede ser de ese mes o no)
+function renderCalendar(container, displayDate, onPick, getCount, selectedDateForHighlight){
   const root = (typeof container === 'string') ? document.getElementById(container) : container;
   if(!root) return;
   root.innerHTML = '';
 
-  const d = selectedDate ? new Date(selectedDate) : new Date();
+  const d = displayDate ? new Date(displayDate) : new Date();
   const year = d.getFullYear(); 
   const month = d.getMonth();
 
   const first = new Date(year, month, 1);
   const start = new Date(first); 
-  // Lunes como primer día (ISO): ajusta desde el lunes anterior
-  start.setDate(first.getDate() - ((first.getDay()+6)%7));
+  start.setDate(first.getDate() - ((first.getDay()+6)%7)); // lunes
 
   const days = ['L','M','X','J','V','S','D'];
   days.forEach(x=>{
@@ -29,19 +26,20 @@ function renderCalendar(container, selectedDate, onPick, getCount){
   for(let i=0;i<42;i++){
     const cur = new Date(start); 
     cur.setDate(start.getDate()+i);
+
     const div = document.createElement('div'); 
     div.className = 'day';
     div.textContent = cur.getDate();
 
-    const isToday = (cur.toDateString() === new Date().toDateString());
-    if(isToday) div.classList.add('today');
-
+    if(cur.toDateString() === new Date().toDateString()) div.classList.add('today');
     if(cur.getMonth() !== month) div.classList.add('dim');
 
-    const isSelected = selectedDate && (cur.toDateString() === new Date(selectedDate).toDateString());
-    if(isSelected) div.classList.add('selected');
+    // Resaltado del seleccionado (si pertenece al mes visible)
+    if(selectedDateForHighlight && cur.toDateString() === new Date(selectedDateForHighlight).toDateString()){
+      div.classList.add('selected');
+    }
 
-    // Badge de cantidad de citas
+    // Badge de citas
     const ymd = cur.toISOString().slice(0,10);
     try{
       const n = typeof getCount === 'function' ? (getCount(ymd)|0) : 0;
@@ -51,7 +49,7 @@ function renderCalendar(container, selectedDate, onPick, getCount){
         b.textContent = n;
         div.appendChild(b);
       }
-    }catch(e){/* ignore */ }
+    }catch(e){}
 
     div.onclick = ()=> onPick && onPick(cur);
     root.appendChild(div);
