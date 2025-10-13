@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CitasPro — Auto‑agenda VIP</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg">
+<main class="card">
+<h2>Auto‑agenda VIP</h2>
+<p class="muted">Selecciona fecha y hora disponibles</p>
+<div id="calendar" class="calendar"></div>
+<form id="vipForm" class="stack">
+<input id="vipName" placeholder="Tu nombre" required>
+<input id="vipPhone" placeholder="WhatsApp" required>
+<input id="vipService" placeholder="Servicio" required>
+<select id="vipDuration">
+<option value="60">60 min</option>
+<option value="90">90 min</option>
+</select>
+<input id="vipDate" type="date" required>
+<input id="vipTime" type="time" required>
+<button class="btn primary" type="submit">Reservar</button>
+</form>
+<div id="vipMsg" class="muted"></div>
+</main>
+
+
+<script src="storage.js"></script>
+<script src="calendar.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const token = q.get('t');
+const ok = Storage.validateVip(token);
+if(!ok){
+document.body.innerHTML = '<main class="card"><h2>Enlace inválido</h2><p>Pide un enlace válido a tu negocio.</p></main>';
+}
+const form = document.getElementById('vipForm');
+form.addEventListener('submit', (e)=>{
+e.preventDefault();
+const appt = {
+name: vipName.value.trim(),
+phone: vipPhone.value.trim(),
+service: vipService.value.trim(),
+date: vipDate.value,
+time: vipTime.value,
+duration: parseInt(vipDuration.value,10),
+price: 0,
+source: 'vip'
+};
+Storage.saveAppointment(appt);
+document.getElementById('vipMsg').textContent = '¡Listo! Tu cita quedó registrada.';
+form.reset();
+});
+</script>
+</body>
+</html>
