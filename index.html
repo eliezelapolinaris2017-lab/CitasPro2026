@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CitasPro — Preview</title>
+<style>
+:root{ --brand:#ff4d5a; --ink:#1f2937; --muted:#6b7280; --surface:#ffffff; --shadow:0 10px 25px rgba(0,0,0,.08); }
+*{ box-sizing:border-box; }
+html,body{ height:100%;}
+body{ margin:0; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; color:var(--ink);} 
+.bg{ background:linear-gradient(135deg, #fff, #ffe7ea); min-height:100%; }
+.topbar{ position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--surface); box-shadow:var(--shadow); z-index:1; }
+.brand{ display:flex; gap:12px; align-items:center; }
+.logo{ width:36px; height:36px; border-radius:10px; object-fit:cover; background:var(--brand); }
+.card{ width:min(980px, 95%); margin:24px auto; background:var(--surface); border-radius:24px; padding:24px; box-shadow:var(--shadow); }
+.grid{ display:grid; grid-template-columns: 1.2fr .8fr; gap:24px; width:min(1200px,95%); margin:24px auto; }
+.stack{ display:flex; flex-direction:column; gap:12px; }
+.row{ display:flex; gap:12px; }
+input, select, textarea{ padding:12px 14px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; outline:none; width:100%; }
+input:focus, select:focus, textarea:focus{ border-color:var(--brand); box-shadow:0 0 0 3px color-mix(in oklab, var(--brand) 20%, transparent); }
+.btn{ border:0; padding:12px 16px; border-radius:12px; cursor:pointer; box-shadow:var(--shadow); background:#f3f4f6; }
+.btn.primary{ background:var(--brand); color:white; }
+.btn.ghost{ background:#fff; border:1px solid #e5e7eb; }
+.muted{ color:var(--muted);} 
+.foot{ text-align:center; margin:24px 0 40px; color:var(--muted);} 
+.avatar{ width:72px; height:72px; background:var(--brand); border-radius:50%; margin:0 auto 8px; }
+.hidden{ display:none !important; }
+
+.list{ display:grid; gap:10px; margin-top:12px; }
+.item{ display:flex; align-items:center; justify-content:space-between; padding:12px; background:#fff; border-radius:12px; border:1px solid #eee; }
+.item .tags{ display:flex; gap:6px; }
+.tag{ padding:4px 8px; border-radius:8px; background:#f3f4f6; font-size:12px; }
+
+/* Calendario minimal */
+.calendar{ display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; margin-bottom:12px; }
+.calendar .dow{ text-align:center; font-weight:600; color:var(--muted); }
+.calendar .day{ padding:10px; text-align:center; border-radius:10px; background:#fff; border:1px solid #eee; cursor:pointer; }
+.calendar .day.today{ outline:2px solid var(--brand);} 
+.calendar .day.selected{ background:color-mix(in oklab, var(--brand) 20%, white); border-color:var(--brand); }
+@media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body class="bg">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" id="brandLogo"></div>
+      <div>
+        <h1 id="brandTitle" style="margin:0">CitasPro</h1>
+        <small class="muted">Agenda y Auto‑agenda VIP</small>
+      </div>
+    </div>
+    <nav class="top-actions">
+      <button id="btnToLogin" class="btn">Login</button>
+      <button id="btnToDashboard" class="btn">Panel</button>
+      <button id="btnToVip" class="btn ghost">Auto‑agenda VIP</button>
+    </nav>
+  </header>
+
+  <!-- VISTA LOGIN -->
+  <main id="view-login" class="card">
+    <div class="avatar"></div>
+    <h2>Bienvenido</h2>
+    <p class="muted">Ingresa como <b>admin</b> o usa la demo</p>
+    <form id="loginForm" class="stack" style="max-width:480px;margin:auto;">
+      <input id="email" type="email" placeholder="Email (admin@example.com)" required>
+      <input id="password" type="password" placeholder="Contraseña (admin)" required>
+      <div class="row">
+        <button type="submit" class="btn primary" style="width:100%">Login</button>
+        <button id="btnDemo" type="button" class="btn" style="width:100%">Probar demo</button>
+      </div>
+    </form>
+    <hr>
+    <p class="muted" style="text-align:center">¿Eres cliente VIP? Prueba la auto‑agenda:</p>
+    <div style="text-align:center"><button id="goVipFromLogin" class="btn ghost">Ir a Auto‑agenda VIP</button></div>
+  </main>
+
+  <!-- VISTA PANEL (DASHBOARD) -->
+  <main id="view-dashboard" class="grid hidden">
+    <section class="card">
+      <h2>Agenda</h2>
+      <div id="cal-admin" class="calendar"></div>
+      <form id="appointmentForm" class="stack">
+        <h3>Nueva cita</h3>
+        <div class="row">
+          <input id="clientName" placeholder="Nombre del cliente" required>
+          <input id="clientPhone" placeholder="WhatsApp (con código país)" required>
+        </div>
+        <div class="row">
+          <input id="service" placeholder="Servicio (ej. Maquillaje)" required>
+          <input id="price" type="number" min="0" placeholder="Precio" required>
+        </div>
+        <div class="row">
+          <input id="date" type="date" required>
+          <input id="time" type="time" required>
+          <select id="duration">
+            <option value="30">30 min</option>
+            <option value="60" selected>60 min</option>
+            <option value="90">90 min</option>
+          </select>
+        </div>
+        <button class="btn primary" type="submit">Guardar cita</button>
+      </form>
+      <div id="dayList" class="list"></div>
+    </section>
+
+    <section class="card">
+      <h2>Configuración</h2>
+      <div class="stack">
+        <label>Color principal <input id="themeColor" type="color" value="#ff4d5a"></label>
+        <label>Mensaje WhatsApp prellenado
+          <textarea id="waTemplate" rows="4" placeholder="Hola {{nombre}}, tu cita es el {{fecha}} a las {{hora}} por {{servicio}}. Precio: ${{precio}}."></textarea>
+        </label>
+        <label>Enlace VIP (token)
+          <div class="row">
+            <input id="vipToken" placeholder="Token" readonly>
+            <button id="btnGenVip" class="btn">Generar</button>
+          </div>
+        </label>
+        <button id="btnShareVip" class="btn ghost">Copiar enlace VIP</button>
+      </div>
+
+      <h3>Mis citas</h3>
+      <div id="appointments" class="list"></div>
+    </section>
+  </main>
+
+  <!-- VISTA VIP -->
+  <main id="view-vip" class="card hidden">
+    <h2>Auto‑agenda VIP</h2>
+    <p class="muted">Selecciona fecha y hora disponibles</p>
+    <div id="cal-vip" class="calendar"></div>
+    <form id="vipForm" class="stack" style="max-width:520px;margin:auto;">
+      <input id="vipName" placeholder="Tu nombre" required>
+      <input id="vipPhone" placeholder="WhatsApp" required>
+      <input id="vipService" placeholder="Servicio" required>
+      <select id="vipDuration">
+        <option value="60">60 min</option>
+        <option value="90">90 min</option>
+      </select>
+      <input id="vipDate" type="date" required>
+      <input id="vipTime" type="time" required>
+      <button class="btn primary" type="submit">Reservar</button>
+    </form>
+    <div id="vipMsg" class="muted" style="text-align:center;margin-top:8px"></div>
+  </main>
+
+  <footer class="foot">Hecho con ❤ — CitasPro Preview</footer>
+
+<script>
+// =============== Almacenamiento simple (LocalStorage) ===============
+const Storage = {
+  _key: 'citaspro.preview.db',
+  _get(){ return JSON.parse(localStorage.getItem(this._key) || '{}'); },
+  _set(db){ localStorage.setItem(this._key, JSON.stringify(db)); },
+  ensureDemo(){ const db=this._get(); if(!db.user){ db.user={email:'admin@example.com', pass:'admin'}; } if(!db.settings){ db.settings={ themeColor:'#ff4d5a', wa:'Hola {{nombre}}, tu cita es el {{fecha}} a las {{hora}} por {{servicio}}. Precio: ${{precio}}.', vipToken: crypto.randomUUID() }; } if(!db.appointments){ db.appointments=[]; } this._set(db); },
+  login(email,pass){ const db=this._get(); return db.user && db.user.email===email && db.user.pass===pass; },
+  saveAppointment(appt){ const db=this._get(); appt.id=crypto.randomUUID(); db.appointments.push(appt); this._set(db); return appt; },
+  listAppointments(){ return this._get().appointments||[]; },
+  setThemeColor(hex){ const db=this._get(); db.settings=db.settings||{}; db.settings.themeColor=hex; this._set(db); },
+  getThemeColor(){ const db=this._get(); return (db.settings&&db.settings.themeColor)||'#ff4d5a'; },
+  getWhatsAppTemplate(){ const db=this._get(); return (db.settings&&db.settings.wa)||'Hola {{nombre}}, tu cita es el {{fecha}} a las {{hora}} por {{servicio}}.'; },
+  setWhatsAppTemplate(t){ const db=this._get(); db.settings=db.settings||{}; db.settings.wa=t; this._set(db); },
+  ensureVipToken(){ const db=this._get(); db.settings=db.settings||{}; if(!db.settings.vipToken) db.settings.vipToken=crypto.randomUUID(); this._set(db); return db.settings.vipToken; }
+};
+
+// =============== Calendar render ===============
+function renderCalendar(root, selectedDate, onPick){
+  root.innerHTML='';
+  const d = selectedDate ? new Date(selectedDate) : new Date();
+  const year = d.getFullYear(); const month = d.getMonth();
+  const first = new Date(year, month, 1);
+  const start = new Date(first); start.setDate(first.getDate() - ((first.getDay()+6)%7));
+  const days = ['L','M','X','J','V','S','D'];
+  days.forEach(x=>{ const e=document.createElement('div'); e.textContent=x; e.className='dow'; root.appendChild(e);});
+  for(let i=0;i<42;i++){
+    const cur = new Date(start); cur.setDate(start.getDate()+i);
+    const div = document.createElement('div'); div.className='day';
+    div.textContent = cur.getDate();
+    if(cur.toDateString()===new Date().toDateString()) div.classList.add('today');
+    div.onclick = ()=> onPick(cur);
+    root.appendChild(div);
+  }
+}
+
+// =============== Utilidades UI ===============
+function show(id){ document.getElementById('view-login').classList.add('hidden'); document.getElementById('view-dashboard').classList.add('hidden'); document.getElementById('view-vip').classList.add('hidden'); document.getElementById(id).classList.remove('hidden'); }
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function fmtTime(d){ return d.toTimeString().slice(0,5); }
+
+// =============== App ===============
+(function(){
+  Storage.ensureDemo();
+  // Top nav
+  document.getElementById('btnToLogin').onclick = ()=> show('view-login');
+  document.getElementById('btnToDashboard').onclick = ()=> { initDashboard(); show('view-dashboard'); };
+  document.getElementById('btnToVip').onclick = ()=> { initVip(); show('view-vip'); };
+  document.getElementById('goVipFromLogin').onclick = ()=> { initVip(); show('view-vip'); };
+
+  // Login
+  const loginForm = document.getElementById('loginForm');
+  loginForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const pass  = document.getElementById('password').value.trim();
+    if(Storage.login(email, pass)){
+      initDashboard();
+      show('view-dashboard');
+    } else alert('Credenciales inválidas (usa admin@example.com / admin)');
+  });
+  document.getElementById('btnDemo').onclick = ()=>{ initDashboard(); show('view-dashboard'); };
+
+  // Dashboard init
+  function initDashboard(){
+    // Tema
+    const tc = document.getElementById('themeColor');
+    tc.value = Storage.getThemeColor();
+    document.documentElement.style.setProperty('--brand', tc.value);
+    tc.oninput = ()=>{ Storage.setThemeColor(tc.value); document.documentElement.style.setProperty('--brand', tc.value); };
+
+    const wa = document.getElementById('waTemplate');
+    wa.value = Storage.getWhatsAppTemplate();
+    wa.oninput = ()=> Storage.setWhatsAppTemplate(wa.value);
+
+    const token = Storage.ensureVipToken();
+    const vipToken = document.getElementById('vipToken');
+    vipToken.value = token;
+    document.getElementById('btnGenVip').onclick = ()=>{ vipToken.value = Storage.ensureVipToken(); alert('Token generado'); };
+    document.getElementById('btnShareVip').onclick = async ()=>{
+      const url = location.href + '#vip?t='+Storage.ensureVipToken();
+      try{ await navigator.clipboard.writeText(url); alert('Enlace copiado: '+url);}catch{ alert('Tu enlace: '+url); }
+    };
+
+    // Calendario admin
+    const cal = document.getElementById('cal-admin');
+    let selected = new Date();
+    renderCalendar(cal, selected, (d)=>{ selected=d; refreshDay(); });
+    const dateInp = document.getElementById('date');
+    dateInp.valueAsDate = selected;
+
+    const form = document.getElementById('appointmentForm');
+    form.onsubmit = (e)=>{
+      e.preventDefault();
+      const appt = {
+        name: document.getElementById('clientName').value.trim(),
+        phone: document.getElementById('clientPhone').value.trim(),
+        service: document.getElementById('service').value.trim(),
+        price: Number(document.getElementById('price').value||0),
+        date: document.getElementById('date').value,
+        time: document.getElementById('time').value,
+        duration: Number(document.getElementById('duration').value||60),
+        source: 'admin'
+      };
+      Storage.saveAppointment(appt);
+      form.reset(); dateInp.valueAsDate = selected;
+      refreshDay();
+    };
+
+    function refreshDay(){
+      const dd = dateInp.value || fmtDate(new Date());
+      const items = Storage.listAppointments().filter(a=>a.date===dd);
+      const dayList = document.getElementById('dayList');
+      dayList.innerHTML = items.map(a=> itemHtml(a)).join('') || '<p class="muted">No hay citas.</p>';
+      // también refrescamos listado general
+      const listAll = document.getElementById('appointments');
+      const all = Storage.listAppointments();
+      listAll.innerHTML = all.map(a=> itemHtml(a)).join('') || '<p class="muted">Aún sin citas.</p>';
+    }
+
+    function itemHtml(a){
+      const msg = Storage.getWhatsAppTemplate()
+        .replace('{{nombre}}', a.name)
+        .replace('{{fecha}}', a.date)
+        .replace('{{hora}}', a.time)
+        .replace('{{servicio}}', a.service)
+        .replace('{{precio}}', a.price);
+      const wa = `https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
+      return `<div class="item">
+        <div>
+          <strong>${a.time}</strong> — ${a.name} · ${a.service}
+          <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
+        </div>
+        <div class="row">
+          <a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a>
+        </div>
+      </div>`;
+    }
+
+    // Primera carga
+    refreshDay();
+  }
+
+  // VIP init
+  function initVip(){
+    const cal = document.getElementById('cal-vip');
+    let selected = new Date();
+    renderCalendar(cal, selected, (d)=>{ selected=d; document.getElementById('vipDate').value = fmtDate(d); });
+    document.getElementById('vipDate').valueAsDate = selected;
+
+    const form = document.getElementById('vipForm');
+    form.onsubmit = (e)=>{
+      e.preventDefault();
+      const appt = {
+        name: document.getElementById('vipName').value.trim(),
+        phone: document.getElementById('vipPhone').value.trim(),
+        service: document.getElementById('vipService').value.trim(),
+        date: document.getElementById('vipDate').value,
+        time: document.getElementById('vipTime').value,
+        duration: Number(document.getElementById('vipDuration').value||60),
+        price: 0,
+        source: 'vip'
+      };
+      Storage.saveAppointment(appt);
+      document.getElementById('vipMsg').textContent = '¡Listo! Tu cita quedó registrada.';
+      form.reset();
+    };
+  }
+
+  // Mostrar login por defecto
+  show('view-login');
+})();
+</script>
+</body>
+</html>
