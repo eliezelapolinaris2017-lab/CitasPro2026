@@ -16,7 +16,7 @@
       </div>
     </div>
     <nav class="top-actions">
-      <button id="btnShareVip" class="btn ghost">Copiar enlace VIP</button>
+      <a class="btn ghost" href="settings.html">Configuración</a>
       <button id="btnLogout" class="btn">Salir</button>
     </nav>
   </header>
@@ -25,14 +25,11 @@
     <!-- Columna izquierda: Calendario y crear cita -->
     <section class="card">
       <h2>Agenda</h2>
-
-      <!-- CONTROLES DEL CALENDARIO -->
       <div class="cal-header">
         <button id="calPrev" class="btn">←</button>
         <div id="calLabel" class="cal-label">Mes Año</div>
         <button id="calNext" class="btn">→</button>
       </div>
-
       <div id="calendar" class="calendar"></div>
 
       <form id="appointmentForm" class="stack">
@@ -60,26 +57,9 @@
       <div class="list" id="dayList"></div>
     </section>
 
-    <!-- Columna derecha: Personalización y archivos -->
+    <!-- Columna derecha: Mis citas -->
     <section class="card">
-      <h2>Configuración</h2>
-      <div class="stack">
-        <label>Color principal <input id="themeColor" type="color" value="#ff4d5a"></label>
-        <label>Logo <input id="logoInput" type="file" accept="image/*"></label>
-        <label>Fondo <input id="bgInput" type="file" accept="image/*"></label>
-        <label>Mensaje WhatsApp prellenado
-          <textarea id="waTemplate" rows="4" placeholder="Hola {{nombre}}, tu cita es el {{fecha}} a las {{hora}} por {{servicio}}. Precio: ${{precio}}."></textarea>
-        </label>
-        <label>Enlace VIP (token)
-          <div class="row">
-            <input id="vipToken" placeholder="Token" readonly>
-            <button id="btnGenVip" class="btn">Generar</button>
-          </div>
-        </label>
-        <button id="btnShareVip" class="btn ghost">Copiar enlace VIP</button>
-      </div>
-
-      <h3>Mis citas</h3>
+      <h2>Mis citas</h2>
       <div id="appointments" class="list"></div>
     </section>
   </main>
@@ -91,4 +71,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
