@@ -20,8 +20,8 @@
     if(!form) return;
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const email = (document.getElementById('email')||{}).value?.trim();
-      const pass  = (document.getElementById('password')||{}).value?.trim();
+      const email = document.getElementById('email').value.trim();
+      const pass  = document.getElementById('password').value.trim();
       const ok = await Storage.login(email, pass);
       if(ok) location.href='dashboard.html';
       else alert('Credenciales inválidas. Usa admin@example.com / admin');
@@ -41,8 +41,8 @@
     const dayList = document.getElementById('dayList');
     const allList = document.getElementById('appointments');
 
-    let viewDate = new Date();      // mes visible
-    let selected = new Date();      // día seleccionado
+    let viewDate = new Date();
+    let selected = new Date();
     if(dateEl) dateEl.valueAsDate = selected;
 
     function labelMonthES(d){
@@ -56,7 +56,7 @@
         selected = d;
         if(dateEl) dateEl.valueAsDate = d;
         refreshLists();
-        drawCalendar(); // re-render para mover el resaltado si cambia de mes
+        drawCalendar();
       }, getCount, selected);
       const lab = document.getElementById('calLabel');
       if(lab) lab.textContent = labelMonthES(viewDate);
@@ -179,18 +179,40 @@
     waTemplate.addEventListener('input', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
     waTemplate.addEventListener('change', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
 
-    // VIP
+    // VIP token y enlace funcional
     const vipToken = document.getElementById('vipToken');
     const btnGenVip = document.getElementById('btnGenVip');
     const btnShareVip = document.getElementById('btnShareVip');
+    const preview = document.getElementById('vipLinkPreview');
+
+    const renderPreview = ()=>{
+      const url = new URL('vip.html', location.href);
+      url.searchParams.set('t', Storage.ensureVipToken());
+      if(preview) preview.textContent = url.toString();
+    };
+
     if(vipToken){ vipToken.value = Storage.ensureVipToken(); }
-    if(btnGenVip){ btnGenVip.onclick = ()=>{ vipToken.value = Storage.ensureVipToken(); alert('Token generado'); }; }
+    renderPreview();
+
+    if(btnGenVip){ 
+      btnGenVip.onclick = ()=>{ 
+        vipToken.value = Storage.ensureVipToken(); 
+        alert('Token generado'); 
+        renderPreview(); 
+      }; 
+    }
+
     if(btnShareVip){
       btnShareVip.onclick = async ()=>{
-        const url = new URL(location.origin + '/vip.html');
+        const url = new URL('vip.html', location.href);
         url.searchParams.set('t', Storage.ensureVipToken());
-        try{ await navigator.clipboard.writeText(url.toString()); alert('Enlace VIP copiado: ' + url); }
-        catch{ alert('Tu enlace VIP: ' + url); }
+        renderPreview();
+        try {
+          await navigator.clipboard.writeText(url.toString());
+          alert('Enlace VIP copiado: ' + url);
+        } catch {
+          alert('Tu enlace VIP: ' + url);
+        }
       };
     }
   }
@@ -202,21 +224,23 @@
 
     Storage.applyBranding();
 
-    const cal = document.getElementById('calendar');
-    let selected = new Date();
-    renderCalendar(cal, selected, (d)=>{ selected = d; const vipDate = document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate = d; }, 
-      (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length
-    );
-    const vipDate = document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate = selected;
-
-    const form = document.getElementById('vipForm');
     const q = new URLSearchParams(location.search);
     const token = q.get('t');
     if(!Storage.validateVip(token)){
-      document.body.innerHTML = '<main class="card"><h2>Enlace inválido</h2><p>Pide un enlace válido a tu negocio.</p></main>';
+      document.body.innerHTML = '<main class="card"><h2>Enlace inválido</h2><p>Pide un enlace válido a tu negocio.</p><p><a class="btn" href="index.html">Ir al inicio</a></p></main>';
       return;
     }
 
+    const cal = document.getElementById('calendar');
+    let selected = new Date();
+    renderCalendar(cal, selected, (d)=>{ selected = d; const vipDate = document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate = d; },
+      (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length
+    );
+    const vipDate = document.getElementById('vipDate'); 
+    if(vipDate) vipDate.valueAsDate = selected;
+
+    const form = document.getElementById('vipForm');
+    const msgBox = document.getElementById('vipMsg');
     form.addEventListener('submit', (e)=>{
       e.preventDefault();
       const appt = {
@@ -230,8 +254,7 @@
         source: 'vip'
       };
       Storage.saveAppointment(appt);
-      const msg = document.getElementById('vipMsg');
-      if(msg) msg.textContent = '¡Listo! Tu cita quedó registrada.';
+      if(msgBox) msgBox.textContent = '¡Listo! Tu cita quedó registrada.';
       form.reset();
     });
   }
