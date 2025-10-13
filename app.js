@@ -1,7 +1,6 @@
 (function(){
   // ===== Helpers =====
   function fmtDateShort(iso){ 
-    // iso: YYYY-MM-DD -> DD/MM/YY
     if(!iso || iso.length < 10) return iso || '';
     const [y,m,d] = iso.slice(0,10).split('-');
     return `${d}/${m}/${y.slice(2)}`;
@@ -9,204 +8,191 @@
 
   document.addEventListener('DOMContentLoaded', ()=> {
     Storage.bootstrapUI();
-    wireLoginDemo();
+    wireLogin();
     wireDashboard();
+    wireSettings();
     wireVip();
   });
 
   // -------- Login (index.html) --------
-  function wireLoginDemo(){
+  function wireLogin(){
     const form = document.getElementById('loginForm');
-    const btnDemo = document.getElementById('btnDemo');
-    if(!form && !btnDemo) return;
-
-    if(form){
-      form.addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        const email = (document.getElementById('email')||{}).value?.trim();
-        const pass  = (document.getElementById('password')||{}).value?.trim();
-        const ok = await Storage.login(email, pass);
-        if(ok){ location.href='dashboard.html'; }
-        else { alert('Credenciales inválidas. Usa admin@example.com / admin'); }
-      });
-    }
-    if(btnDemo){
-      btnDemo.onclick = ()=>{ Storage.ensureDemoAdmin(); location.href = 'dashboard.html'; };
-    }
-  }
-
-  function wireDashboard(){
-  const isDashboard = !!document.getElementById('appointments');
-  if(!isDashboard) return;
-
-  Storage.applyBranding();
-
-  // Color
-  const themeColor = document.getElementById('themeColor');
-  if(themeColor){
-    themeColor.value = Storage.getThemeColor();
-    themeColor.oninput = ()=> Storage.setThemeColor(themeColor.value);
-  }
-
-  // WhatsApp template persistente
-  const waTemplate = document.getElementById('waTemplate');
-  if(waTemplate){
-    waTemplate.value = Storage.getWhatsAppTemplate();
-    waTemplate.addEventListener('input', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
-    waTemplate.addEventListener('change', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
-  }
-
-  // VIP
-  const vipToken = document.getElementById('vipToken');
-  const btnGenVip = document.getElementById('btnGenVip');
-  const btnShareVip = document.getElementById('btnShareVip');
-  if(vipToken){ vipToken.value = Storage.ensureVipToken(); }
-  if(btnGenVip){ btnGenVip.onclick = ()=>{ vipToken.value = Storage.ensureVipToken(); alert('Token generado'); }; }
-  if(btnShareVip){
-    btnShareVip.onclick = async ()=>{
-      const url = new URL(location.origin + location.pathname.replace('dashboard.html','vip.html'));
-      url.searchParams.set('t', Storage.ensureVipToken());
-      try{ await navigator.clipboard.writeText(url.toString()); alert('Enlace VIP copiado: ' + url); }
-      catch{ alert('Tu enlace VIP: ' + url); }
-    };
-  }
-
-  // Logo y fondo
-  const logoInput = document.getElementById('logoInput');
-  if(logoInput){
-    logoInput.onchange = async (e)=>{
-      const f = e.target.files?.[0]; if(!f) return;
-      const dataUrl = await Storage.fileToDataUrl(f);
-      Storage.setLogo(dataUrl);
-    };
-  }
-  const bgInput = document.getElementById('bgInput');
-  if(bgInput){
-    bgInput.onchange = async (e)=>{
-      const f = e.target.files?.[0]; if(!f) return;
-      const dataUrl = await Storage.fileToDataUrl(f);
-      Storage.setBackground(dataUrl);
-    };
-  }
-
-  // Calendario + formulario
-  const cal = document.getElementById('calendar');
-  const appointmentForm = document.getElementById('appointmentForm');
-  const dateEl = document.getElementById('date');
-  const dayList = document.getElementById('dayList');
-  const allList = document.getElementById('appointments');
-
-  // Estado de vista/selección
-  let viewDate = new Date();      // mes visible
-  let selected = new Date();      // día seleccionado
-  if(dateEl) dateEl.valueAsDate = selected;
-
-  // Mes en texto (ES)
-  function labelMonthES(d){
-    return d.toLocaleDateString('es-ES', { month:'long', year:'numeric' })
-            .replace(/^\w/, c=>c.toUpperCase());
-  }
-
-  // Dibuja calendario con contador + seleccionado + label
-  function drawCalendar(){
-    const getCount = (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length;
-    renderCalendar(cal, viewDate, (d)=>{ 
-      selected = d; 
-      if(dateEl) dateEl.valueAsDate = d; 
-      refreshLists(); 
-      drawCalendar(); // re-render para mover el resaltado si cambió de mes
-    }, getCount, selected);
-
-    const lab = document.getElementById('calLabel');
-    if(lab) lab.textContent = labelMonthES(viewDate);
-  }
-
-  // Navegación de mes
-  const prev = document.getElementById('calPrev');
-  const next = document.getElementById('calNext');
-  if(prev) prev.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()-1, 1); drawCalendar(); };
-  if(next) next.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()+1, 1); drawCalendar(); };
-
-  drawCalendar();
-
-  if(appointmentForm){
-    appointmentForm.addEventListener('submit', (e)=>{
+    if(!form) return;
+    form.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const appt = {
-        name: document.getElementById('clientName').value.trim(),
-        phone: document.getElementById('clientPhone').value.trim(),
-        service: document.getElementById('service').value.trim(),
-        price: Number(document.getElementById('price').value||0),
-        date: (document.getElementById('date').value || '').slice(0,10),
-        time: (document.getElementById('time').value || '').slice(0,5),
-        duration: Number(document.getElementById('duration').value||60),
-        source: 'admin'
-      };
-      Storage.saveAppointment(appt);
-      appointmentForm.reset();
-      if(dateEl) dateEl.valueAsDate = selected;
-      refreshLists();
-      drawCalendar(); // actualiza badges tras guardar
+      const email = (document.getElementById('email')||{}).value?.trim();
+      const pass  = (document.getElementById('password')||{}).value?.trim();
+      const ok = await Storage.login(email, pass);
+      if(ok) location.href='dashboard.html';
+      else alert('Credenciales inválidas. Usa admin@example.com / admin');
     });
   }
 
-  function refreshLists(){
-    const dd = (dateEl && dateEl.value) ? dateEl.value.slice(0,10) : new Date().toISOString().slice(0,10);
-    const all = Storage.listAppointments();
-    const today = all.filter(a => a.date === dd);
+  // -------- Dashboard (dashboard.html) --------
+  function wireDashboard(){
+    const isDashboard = !!document.getElementById('appointments');
+    if(!isDashboard) return;
 
-    // Lista del día: solo hora
-    if(dayList){
-      dayList.innerHTML = today.map(renderItemDay).join('') || '<p class="muted">No hay citas.</p>';
+    Storage.applyBranding();
+
+    const cal = document.getElementById('calendar');
+    const appointmentForm = document.getElementById('appointmentForm');
+    const dateEl = document.getElementById('date');
+    const dayList = document.getElementById('dayList');
+    const allList = document.getElementById('appointments');
+
+    let viewDate = new Date();      // mes visible
+    let selected = new Date();      // día seleccionado
+    if(dateEl) dateEl.valueAsDate = selected;
+
+    function labelMonthES(d){
+      return d.toLocaleDateString('es-ES', { month:'long', year:'numeric' })
+              .replace(/^\w/, c=>c.toUpperCase());
     }
-    // Mis Citas: fecha corta + hora
-    if(allList){
-      allList.innerHTML = all.map(renderItemAll).join('') || '<p class="muted">Aún sin citas.</p>';
+
+    function drawCalendar(){
+      const getCount = (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length;
+      renderCalendar(cal, viewDate, (d)=>{
+        selected = d;
+        if(dateEl) dateEl.valueAsDate = d;
+        refreshLists();
+        drawCalendar(); // re-render para mover el resaltado si cambia de mes
+      }, getCount, selected);
+      const lab = document.getElementById('calLabel');
+      if(lab) lab.textContent = labelMonthES(viewDate);
     }
+
+    const prev = document.getElementById('calPrev');
+    const next = document.getElementById('calNext');
+    if(prev) prev.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()-1, 1); drawCalendar(); };
+    if(next) next.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()+1, 1); drawCalendar(); };
+
+    drawCalendar();
+
+    if(appointmentForm){
+      appointmentForm.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const appt = {
+          name: document.getElementById('clientName').value.trim(),
+          phone: document.getElementById('clientPhone').value.trim(),
+          service: document.getElementById('service').value.trim(),
+          price: Number(document.getElementById('price').value||0),
+          date: (document.getElementById('date').value || '').slice(0,10),
+          time: (document.getElementById('time').value || '').slice(0,5),
+          duration: Number(document.getElementById('duration').value||60),
+          source: 'admin'
+        };
+        Storage.saveAppointment(appt);
+        appointmentForm.reset();
+        if(dateEl) dateEl.valueAsDate = selected;
+        refreshLists();
+        drawCalendar();
+      });
+    }
+
+    function refreshLists(){
+      const dd = (dateEl && dateEl.value) ? dateEl.value.slice(0,10) : new Date().toISOString().slice(0,10);
+      const all = Storage.listAppointments();
+      const today = all.filter(a => a.date === dd);
+
+      if(dayList){
+        dayList.innerHTML = today.map(renderItemDay).join('') || '<p class="muted">No hay citas.</p>';
+      }
+      if(allList){
+        allList.innerHTML = all.map(renderItemAll).join('') || '<p class="muted">Aún sin citas.</p>';
+      }
+    }
+
+    function renderItemDay(a){
+      const msg = Storage.getWhatsAppTemplate()
+        .replace('{{nombre}}', a.name)
+        .replace('{{fecha}}', a.date)
+        .replace('{{hora}}', a.time)
+        .replace('{{servicio}}', a.service)
+        .replace('{{precio}}', a.price);
+      const wa = `https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
+      return `<div class="item">
+        <div>
+          <strong>${a.time}</strong> — ${a.name} · ${a.service}
+          <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
+        </div>
+        <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
+      </div>`;
+    }
+
+    function renderItemAll(a){
+      const msg = Storage.getWhatsAppTemplate()
+        .replace('{{nombre}}', a.name)
+        .replace('{{fecha}}', a.date)
+        .replace('{{hora}}', a.time)
+        .replace('{{servicio}}', a.service)
+        .replace('{{precio}}', a.price);
+      const wa = `https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
+      const fechaHora = `${fmtDateShort(a.date)} ${a.time}`;
+      return `<div class="item">
+        <div>
+          <strong>${fechaHora}</strong> — ${a.name} · ${a.service}
+          <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
+        </div>
+        <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
+      </div>`;
+    }
+
+    refreshLists();
+
+    const btnLogout = document.getElementById('btnLogout');
+    if(btnLogout){ btnLogout.onclick = ()=> location.href='index.html'; }
   }
 
-  function renderItemDay(a){
-    const msg = Storage.getWhatsAppTemplate()
-      .replace('{{nombre}}', a.name)
-      .replace('{{fecha}}', a.date)
-      .replace('{{hora}}', a.time)
-      .replace('{{servicio}}', a.service)
-      .replace('{{precio}}', a.price);
-    const wa = `https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
-    return `<div class="item">
-      <div>
-        <strong>${a.time}</strong> — ${a.name} · ${a.service}
-        <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
-      </div>
-      <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
-    </div>`;
-  }
+  // -------- Settings (settings.html) --------
+  function wireSettings(){
+    const tc = document.getElementById('themeColor');
+    if(!tc) return; // no estamos en settings
 
-  function renderItemAll(a){
-    const msg = Storage.getWhatsAppTemplate()
-      .replace('{{nombre}}', a.name)
-      .replace('{{fecha}}', a.date)
-      .replace('{{hora}}', a.time)
-      .replace('{{servicio}}', a.service)
-      .replace('{{precio}}', a.price);
-    const wa = `https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
-    const fechaHora = `${fmtDateShort(a.date)} ${a.time}`;
-    return `<div class="item">
-      <div>
-        <strong>${fechaHora}</strong> — ${a.name} · ${a.service}
-        <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
-      </div>
-      <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
-    </div>`;
-  }
+    Storage.applyBranding();
 
-  // primera carga de listas
-  refreshLists();
+    // Color
+    tc.value = Storage.getThemeColor();
+    tc.oninput = ()=> Storage.setThemeColor(tc.value);
 
-  const btnLogout = document.getElementById('btnLogout');
-  if(btnLogout){ btnLogout.onclick = ()=> location.href='index.html'; }
-}
+    // Logo y fondo
+    const logoInput = document.getElementById('logoInput');
+    if(logoInput){
+      logoInput.onchange = async (e)=>{
+        const f = e.target.files?.[0]; if(!f) return;
+        const dataUrl = await Storage.fileToDataUrl(f);
+        Storage.setLogo(dataUrl);
+      };
+    }
+    const bgInput = document.getElementById('bgInput');
+    if(bgInput){
+      bgInput.onchange = async (e)=>{
+        const f = e.target.files?.[0]; if(!f) return;
+        const dataUrl = await Storage.fileToDataUrl(f);
+        Storage.setBackground(dataUrl);
+      };
+    }
 
+    // WhatsApp template
+    const waTemplate = document.getElementById('waTemplate');
+    waTemplate.value = Storage.getWhatsAppTemplate();
+    waTemplate.addEventListener('input', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
+    waTemplate.addEventListener('change', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
+
+    // VIP
+    const vipToken = document.getElementById('vipToken');
+    const btnGenVip = document.getElementById('btnGenVip');
+    const btnShareVip = document.getElementById('btnShareVip');
+    if(vipToken){ vipToken.value = Storage.ensureVipToken(); }
+    if(btnGenVip){ btnGenVip.onclick = ()=>{ vipToken.value = Storage.ensureVipToken(); alert('Token generado'); }; }
+    if(btnShareVip){
+      btnShareVip.onclick = async ()=>{
+        const url = new URL(location.origin + '/vip.html');
+        url.searchParams.set('t', Storage.ensureVipToken());
+        try{ await navigator.clipboard.writeText(url.toString()); alert('Enlace VIP copiado: ' + url); }
+        catch{ alert('Tu enlace VIP: ' + url); }
+      };
+    }
   }
 
   // -------- VIP (vip.html) --------
@@ -247,10 +233,6 @@
       const msg = document.getElementById('vipMsg');
       if(msg) msg.textContent = '¡Listo! Tu cita quedó registrada.';
       form.reset();
-      // Opcional: redibujar calendario VIP para ver el contador
-      renderCalendar(cal, selected, (d)=>{ selected=d; const vd=document.getElementById('vipDate'); if(vd) vd.valueAsDate=d; }, 
-        (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length
-      );
     });
   }
 })();
