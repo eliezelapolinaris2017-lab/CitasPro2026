@@ -34,11 +34,7 @@
         <option value="60">60 min</option>
         <option value="90">90 min</option>
       </select>
-      <select id="vipEmployee" required>
-        <option value="Empleado 1">Empleado 1</option>
-        <option value="Empleado 2">Empleado 2</option>
-        <option value="Empleado 3">Empleado 3</option>
-      </select>
+      <select id="vipEmployee" required></select>
       <input id="vipDate" type="date" required>
       <input id="vipTime" type="time" required>
       <button class="btn primary" type="submit">Reservar</button>
@@ -61,6 +57,11 @@
       return;
     }
 
+    // Empleados dinámicos
+    Storage.ensureEmployees();
+    const selEmp = document.getElementById('vipEmployee');
+    selEmp.innerHTML = Storage.getEmployees().map(e=>`<option>${e}</option>`).join('');
+
     const cal = document.getElementById('calendar');
     let selected = new Date();
 
@@ -73,6 +74,7 @@
       );
     }
     drawCalendar();
+
     const vipDate = document.getElementById('vipDate'); 
     if(vipDate) vipDate.valueAsDate = selected;
 
@@ -85,7 +87,7 @@
         name: document.getElementById('vipName').value.trim(),
         phone: document.getElementById('vipPhone').value.trim(),
         service: document.getElementById('vipService').value.trim(),
-        employee: document.getElementById('vipEmployee').value,
+        employee: selEmp.value,
         date: (document.getElementById('vipDate').value || '').slice(0,10),
         time: (document.getElementById('vipTime').value || '').slice(0,5),
         duration: Number(document.getElementById('vipDuration').value||60),
@@ -93,7 +95,6 @@
         source: 'vip'
       };
 
-      // Validar choque por empleado
       if(!Storage.canSchedule(appt)){
         alert('Ese horario ya está ocupado para ' + appt.employee + '. Elige otra hora o empleado.');
         return;
