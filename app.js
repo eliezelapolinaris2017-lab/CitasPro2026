@@ -1,297 +1,113 @@
 (function(){
-  // Helpers
-  function fmtDateShort(iso){ 
-    if(!iso || iso.length < 10) return iso || '';
-    const [y,m,d] = iso.slice(0,10).split('-');
-    return `${d}/${m}/${y.slice(2)}`;
-  }
+  function fmtDateShort(iso){ if(!iso)return ''; const[y,m,d]=iso.slice(0,10).split('-'); return `${d}/${m}/${y.slice(2)}`; }
+  window.App = {};
 
-  // namespace seguro para handlers globales
-  window.App = window.App || {};
-
-  document.addEventListener('DOMContentLoaded', ()=> {
+  document.addEventListener('DOMContentLoaded', ()=>{
     Storage.bootstrapUI();
-    wireLogin();
-    wireDashboard();
     wireSettings();
-    wireVip();
+    wireDashboard();
   });
 
-  // --- Login ---
-  function wireLogin(){
-    const form = document.getElementById('loginForm');
-    if(!form) return;
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const email = document.getElementById('email').value.trim();
-      const pass  = document.getElementById('password').value.trim();
-      const ok = await Storage.login(email, pass);
-      if(ok) location.href='dashboard.html';
-      else alert('Credenciales inválidas. Usa admin@example.com / admin');
-    });
-  }
-
-  // --- Dashboard: crear/editar citas ---
-  function wireDashboard(){
-    const isDashboard = !!document.getElementById('appointments');
-    if(!isDashboard) return;
-
-    Storage.applyBranding();
-
-    // Elements
-    const cal = document.getElementById('calendar');
-    const form = document.getElementById('appointmentForm');
-    const idEl = document.getElementById('apptId');
-    const nameEl = document.getElementById('clientName');
-    const phoneEl = document.getElementById('clientPhone');
-    const serviceEl = document.getElementById('service');
-    const priceEl = document.getElementById('price');
-    const dateEl = document.getElementById('date');
-    const timeEl = document.getElementById('time');
-    const durationEl = document.getElementById('duration');
-    const empSel = document.getElementById('employee');
-    const notesEl = document.getElementById('notes');
-    const btnCancel = document.getElementById('btnCancelEdit');
-    const btnSave = document.getElementById('btnSave');
-
-    const dayList = document.getElementById('dayList');
-    const allList = document.getElementById('appointments');
-
-    // Empleados dinámicos
-    Storage.ensureEmployees();
-    if (empSel) {
-      empSel.innerHTML = Storage.getEmployees().map(e=>`<option>${e}</option>`).join('');
-    }
-
-    // Estado de calendario
-    let viewDate = new Date();
-    let selected = new Date();
-    if(dateEl) dateEl.valueAsDate = selected;
-
-    function labelMonthES(d){
-      return d.toLocaleDateString('es-ES', { month:'long', year:'numeric' }).replace(/^\w/, c=>c.toUpperCase());
-    }
-
-    function drawCalendar(){
-      const getCount = (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length;
-      renderCalendar(cal, viewDate, (d)=>{
-        selected = d;
-        if(dateEl) dateEl.valueAsDate = d;
-        refresh();
-        drawCalendar();
-      }, getCount, selected);
-      const lab = document.getElementById('calLabel');
-      if(lab) lab.textContent = labelMonthES(viewDate);
-    }
-
-    const prev = document.getElementById('calPrev');
-    const next = document.getElementById('calNext');
-    if(prev) prev.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()-1, 1); drawCalendar(); };
-    if(next) next.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()+1, 1); drawCalendar(); };
-
-    drawCalendar();
-
-    // Guardar / actualizar
-    form.addEventListener('submit',(e)=>{
-      e.preventDefault();
-      const appt = {
-        id: idEl.value || null,
-        name: nameEl.value.trim(),
-        phone: phoneEl.value.trim(),
-        service: serviceEl.value.trim(),
-        employee: empSel.value,
-        notes: (notesEl.value||'').trim(),
-        price: Number(priceEl.value||0),
-        date: (dateEl.value||'').slice(0,10),
-        time: (timeEl.value||'').slice(0,5),
-        duration: Number(durationEl.value||60),
-        source: 'admin'
-      };
-      if(!Storage.canSchedule(appt)){
-        alert('Ese horario ya está ocupado para ' + appt.employee + '. Elige otra hora o empleado.');
-        return;
-      }
-      Storage.saveOrUpdateAppointment(appt);
-      resetEdit();
-      refresh(); drawCalendar();
-    });
-
-    function refresh(){
-      const dd=(dateEl && dateEl.value) ? dateEl.value.slice(0,10) : new Date().toISOString().slice(0,10);
-      const all = Storage.listAppointments();
-      const today = all.filter(a=>a.date===dd);
-
-      dayList.innerHTML = today.map(renderItem).join('') || '<p class="muted">No hay citas.</p>';
-      allList.innerHTML = all.map(renderItem).join('') || '<p class="muted">Aún sin citas.</p>';
-    }
-
-    function renderItem(a){
-      const msg = Storage.getWhatsAppTemplate()
-        .replace('{{nombre}}', a.name)
-        .replace('{{fecha}}', a.date)
-        .replace('{{hora}}', a.time)
-        .replace('{{servicio}}', a.service)
-        .replace('{{precio}}', a.price);
-      const wa = `https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
-      const fechaHora = `${fmtDateShort(a.date)} ${a.time}`;
-      return `<div class="item">
-        <div>
-          <strong>${fechaHora}</strong> — ${a.name} · ${a.service}
-          <div class="tags">
-            <span class="tag">${a.employee||'—'}</span>
-            <span class="tag">${a.duration}m</span>
-            <span class="tag">$${a.price}</span>
-            ${a.source==='vip'?'<span class="tag">VIP</span>':''}
-          </div>
-        </div>
-        <div class="row">
-          <a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a>
-          <button class="btn" onclick="App.editAppointment('${a.id}')">✏️</button>
-        </div>
-      </div>`;
-    }
-
-    // Exponer handler global seguro para los botones de edición
-    window.App.editAppointment = (id)=>{
-      const a = Storage.getAppointment(id); if(!a) return;
-      idEl.value = a.id;
-      nameEl.value = a.name;
-      phoneEl.value = a.phone;
-      serviceEl.value = a.service;
-      priceEl.value = a.price;
-      dateEl.value = a.date;
-      timeEl.value = a.time;
-      durationEl.value = a.duration;
-      notesEl.value = a.notes || '';
-      if (empSel && a.employee) empSel.value = a.employee;
-      btnSave.textContent = 'Actualizar cita';
-      btnCancel.style.display = 'inline-block';
-      nameEl.focus();
-    };
-
-    function resetEdit(){
-      form.reset();
-      idEl.value = '';
-      btnSave.textContent = 'Guardar cita';
-      btnCancel.style.display = 'none';
-      dateEl.valueAsDate = selected;
-    }
-    btnCancel.addEventListener('click', resetEdit);
-
-    refresh();
-
-    const btnLogout = document.getElementById('btnLogout');
-    if(btnLogout){ btnLogout.onclick = ()=> location.href='index.html'; }
-  }
-
-  // --- Settings (marca, WA, VIP y empleados) ---
+  // ⚙️ CONFIGURACIÓN
   function wireSettings(){
-    const tc = document.getElementById('themeColor');
-    if(!tc) return;
-
+    const tc=document.getElementById('themeColor'); if(!tc)return;
     Storage.applyBranding();
 
-    // Color
-    tc.value = Storage.getThemeColor();
-    tc.oninput = ()=> Storage.setThemeColor(tc.value);
+    // Tema
+    tc.value=Storage.getThemeColor(); tc.oninput=()=>Storage.setThemeColor(tc.value);
 
-    // Logo/fondo
-    const logoInput = document.getElementById('logoInput');
-    if(logoInput){
-      logoInput.onchange = async (e)=>{
-        const f = e.target.files?.[0]; if(!f) return;
-        const dataUrl = await Storage.fileToDataUrl(f);
-        Storage.setLogo(dataUrl);
+    // Logo/Fondo
+    ['logoInput','bgInput'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.onchange=async e=>{
+        const f=e.target.files?.[0]; if(!f)return;
+        const data=await Storage.fileToDataUrl(f);
+        id==='logoInput'?Storage.setLogo(data):Storage.setBackground(data);
       };
-    }
-    const bgInput = document.getElementById('bgInput');
-    if(bgInput){
-      bgInput.onchange = async (e)=>{
-        const f = e.target.files?.[0]; if(!f) return;
-        const dataUrl = await Storage.fileToDataUrl(f);
-        Storage.setBackground(dataUrl);
-      };
-    }
+    });
 
-    // WhatsApp template
-    const waTemplate = document.getElementById('waTemplate');
-    waTemplate.value = Storage.getWhatsAppTemplate();
-    waTemplate.addEventListener('input', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
-    waTemplate.addEventListener('change', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
+    // WhatsApp
+    const wa=document.getElementById('waTemplate'); if(wa){ wa.value=Storage.getWhatsAppTemplate(); wa.oninput=()=>Storage.setWhatsAppTemplate(wa.value); }
 
     // VIP
-    const vipToken = document.getElementById('vipToken');
-    const btnGenVip = document.getElementById('btnGenVip');
-    const btnShareVip = document.getElementById('btnShareVip');
-    const preview = document.getElementById('vipLinkPreview');
-    const renderPreview = ()=>{
-      const url = new URL('vip.html', location.href);
-      url.searchParams.set('t', Storage.ensureVipToken());
-      if(preview) preview.textContent = url.toString();
-    };
-    if(vipToken){ vipToken.value = Storage.ensureVipToken(); }
-    renderPreview();
-    if(btnGenVip){
-      btnGenVip.onclick = ()=>{ 
-        vipToken.value = Storage.ensureVipToken(); 
-        alert('Token generado'); 
-        renderPreview(); 
-      };
-    }
-    if(btnShareVip){
-      btnShareVip.onclick = async ()=>{
-        const url = new URL('vip.html', location.href);
-        url.searchParams.set('t', Storage.ensureVipToken());
-        renderPreview();
-        try { await navigator.clipboard.writeText(url.toString()); alert('Enlace VIP copiado: ' + url); }
-        catch { alert('Tu enlace VIP: ' + url); }
-      };
-    }
+    const vip=document.getElementById('vipToken'), gen=document.getElementById('btnGenVip'), share=document.getElementById('btnShareVip'), prev=document.getElementById('vipLinkPreview');
+    const renderPreview=()=>{const u=new URL('vip.html',location.href);u.searchParams.set('t',Storage.ensureVipToken());if(prev)prev.textContent=u.toString();};
+    if(vip)vip.value=Storage.ensureVipToken();renderPreview();
+    if(gen)gen.onclick=()=>{vip.value=Storage.ensureVipToken();alert('Token generado');renderPreview();};
+    if(share)share.onclick=async()=>{const u=new URL('vip.html',location.href);u.searchParams.set('t',Storage.ensureVipToken());renderPreview();await navigator.clipboard.writeText(u.toString());alert('Copiado: '+u);};
 
-    // Gestión de empleados
+    // Google Calendar
+    const w=document.getElementById('gcalWebhook'), chk=document.getElementById('gcalEnabled'), cfg=Storage.getGCal();
+    if(w) w.value=cfg.webhook||'';
+    if(chk) chk.checked=!!cfg.enabled;
+    if(w) w.onchange=()=>Storage.setGCalWebhook(w.value);
+    if(chk) chk.onchange=()=>Storage.setGCalEnabled(chk.checked);
+
+    // Empleados
     Storage.ensureEmployees();
-    const empList=document.getElementById('empList');
-    const addEmp=document.getElementById('addEmp');
-    const newEmp=document.getElementById('newEmp');
-
-    const renderEmp=()=>{
-      empList.innerHTML=Storage.getEmployees().map(e=>`
-        <div class="row">
-          <span>${e}</span>
-          <button class="btn" onclick="App.renameEmployee('${e.replace(/'/g,"\\'")}')">✏️</button>
-          <button class="btn" onclick="App.removeEmployee('${e.replace(/'/g,"\\'")}')">🗑️</button>
-        </div>`).join('');
-    };
-
-    // Exponer handlers globales seguros
-    window.App.renameEmployee = (oldN)=>{
-      const nn=prompt('Nuevo nombre para '+oldN,oldN);
-      if(nn&&nn.trim()){Storage.renameEmployee(oldN,nn.trim()); renderEmp();}
-    };
-    window.App.removeEmployee = (n)=>{
-      if(confirm('Eliminar '+n+'?')){ Storage.deleteEmployee(n); renderEmp(); }
-    };
-
-    addEmp.onclick=()=>{
-      const v=newEmp.value.trim();
-      if(v){ Storage.addEmployee(v); newEmp.value=''; renderEmp(); }
-    };
-
-    renderEmp();
+    const list=document.getElementById('empList'); const add=document.getElementById('addEmp'); const inp=document.getElementById('newEmp');
+    const render=()=>{list.innerHTML=Storage.getEmployees().map(e=>`<div class='row'><span>${e}</span><button class='btn' onclick="App.renameEmployee('${e}')">✏️</button><button class='btn' onclick="App.removeEmployee('${e}')">🗑️</button></div>`).join('');};
+    App.renameEmployee=n=>{const nn=prompt('Nuevo nombre para '+n,n);if(nn&&nn.trim()){Storage.renameEmployee(n,nn.trim());render();}};
+    App.removeEmployee=n=>{if(confirm('Eliminar '+n+'?')){Storage.deleteEmployee(n);render();}};
+    if(add)add.onclick=()=>{if(inp.value.trim()){Storage.addEmployee(inp.value.trim());inp.value='';render();}};
+    render();
   }
 
-  // --- VIP (solo validación; resto en vip.html inline) ---
-  function wireVip(){
-    const isVip = !!document.getElementById('vipForm');
-    if(!isVip) return;
+  // 📅 DASHBOARD
+  function wireDashboard(){
+    const form=document.getElementById('appointmentForm'); if(!form)return;
+    Storage.applyBranding(); Storage.ensureEmployees();
+    const empSel=document.getElementById('employee'); empSel.innerHTML=Storage.getEmployees().map(e=>`<option>${e}</option>`).join('');
 
-    Storage.applyBranding();
+    const date=document.getElementById('date'); date.valueAsDate=new Date();
+    const list=document.getElementById('appointments');
+    const idEl=document.getElementById('apptId'), saveBtn=document.getElementById('btnSave'), cancel=document.getElementById('btnCancelEdit');
+    const refresh=()=>{list.innerHTML=Storage.listAppointments().map(a=>{
+      const msg=Storage.getWhatsAppTemplate().replace('{{nombre}}',a.name).replace('{{fecha}}',a.date).replace('{{hora}}',a.time).replace('{{servicio}}',a.service).replace('{{precio}}',a.price);
+      const wa=`https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
+      return `<div class='item'><div><strong>${fmtDateShort(a.date)} ${a.time}</strong> — ${a.name}<div class='tags'><span class='tag'>${a.employee}</span>${a.googleEventId?'<span class="tag">Google ✓</span>':''}</div></div><div class='row'><a class='btn ghost' target='_blank' href='${wa}'>WhatsApp</a><button class='btn' onclick="App.editAppointment('${a.id}')">✏️</button></div></div>`;
+    }).join('')||'<p class="muted">Sin citas.</p>';};
 
-    const q = new URLSearchParams(location.search);
-    const token = q.get('t');
-    if(!Storage.validateVip(token)){
-      document.body.innerHTML = '<main class="card"><h2>Enlace inválido</h2><p>Pide un enlace válido a tu negocio.</p><p><a class="btn" href="index.html">Ir al inicio</a></p></main>';
-      return;
-    }
+    form.onsubmit=async e=>{
+      e.preventDefault();
+      const appt={
+        id:idEl.value||null,
+        name:clientName.value.trim(),
+        phone:clientPhone.value.trim(),
+        service:service.value.trim(),
+        employee:employee.value,
+        price:Number(price.value||0),
+        date:date.value.slice(0,10),
+        time:time.value.slice(0,5),
+        duration:Number(duration.value||60),
+        notes:notes.value.trim(),
+        source:'admin'
+      };
+      if(!Storage.canSchedule(appt)){alert('Choque de horario para '+appt.employee);return;}
+      Storage.saveOrUpdateAppointment(appt);
+      await pushToGoogleCalendar(appt);
+      reset(); refresh();
+    };
+
+    App.editAppointment=id=>{
+      const a=Storage.getAppointment(id); if(!a)return;
+      idEl.value=a.id; clientName.value=a.name; clientPhone.value=a.phone; service.value=a.service; price.value=a.price; date.value=a.date; time.value=a.time; duration.value=a.duration; notes.value=a.notes||''; employee.value=a.employee;
+      saveBtn.textContent='Actualizar cita'; cancel.style.display='inline-block';
+    };
+    const reset=()=>{form.reset();idEl.value='';saveBtn.textContent='Guardar cita';cancel.style.display='none';date.valueAsDate=new Date();};
+    cancel.onclick=reset;
+    refresh();
   }
+
+  // 🚀 Enviar cita al Google Calendar
+  async function pushToGoogleCalendar(appt){
+    const cfg=Storage.getGCal(); if(!cfg.enabled||!cfg.webhook) return;
+    const payload={ action:appt.googleEventId?'update':'create', appt, eventId:appt.googleEventId||null };
+    try{
+      const r=await fetch(cfg.webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const data=await r.json(); if(data.ok&&data.eventId) Storage.setGoogleEventId(appt.id,data.eventId);
+    }catch(err){ console.warn('Google Calendar error:',err); }
+  }
+
+  window.AppPush = pushToGoogleCalendar; // disponible para VIP
 })();
