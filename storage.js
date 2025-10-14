@@ -135,3 +135,6 @@ const Storage = {
   },
   bootstrapUI(){ this.applyBranding(); }
 };
+// Alias global seguro (opcional)
+window.AppStorage = Storage;
+
