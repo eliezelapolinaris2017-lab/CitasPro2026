@@ -6,6 +6,9 @@
     return `${d}/${m}/${y.slice(2)}`;
   }
 
+  // namespace seguro para handlers globales
+  window.App = window.App || {};
+
   document.addEventListener('DOMContentLoaded', ()=> {
     Storage.bootstrapUI();
     wireLogin();
@@ -14,7 +17,7 @@
     wireVip();
   });
 
-  // Login
+  // --- Login ---
   function wireLogin(){
     const form = document.getElementById('loginForm');
     if(!form) return;
@@ -28,27 +31,39 @@
     });
   }
 
-  // Dashboard (crear/editar citas)
+  // --- Dashboard: crear/editar citas ---
   function wireDashboard(){
     const isDashboard = !!document.getElementById('appointments');
     if(!isDashboard) return;
 
     Storage.applyBranding();
 
+    // Elements
     const cal = document.getElementById('calendar');
     const form = document.getElementById('appointmentForm');
     const idEl = document.getElementById('apptId');
+    const nameEl = document.getElementById('clientName');
+    const phoneEl = document.getElementById('clientPhone');
+    const serviceEl = document.getElementById('service');
+    const priceEl = document.getElementById('price');
     const dateEl = document.getElementById('date');
-    const dayList = document.getElementById('dayList');
-    const allList = document.getElementById('appointments');
+    const timeEl = document.getElementById('time');
+    const durationEl = document.getElementById('duration');
     const empSel = document.getElementById('employee');
+    const notesEl = document.getElementById('notes');
     const btnCancel = document.getElementById('btnCancelEdit');
     const btnSave = document.getElementById('btnSave');
 
-    // empleados dinámicos
-    Storage.ensureEmployees();
-    empSel.innerHTML = Storage.getEmployees().map(e=>`<option>${e}</option>`).join('');
+    const dayList = document.getElementById('dayList');
+    const allList = document.getElementById('appointments');
 
+    // Empleados dinámicos
+    Storage.ensureEmployees();
+    if (empSel) {
+      empSel.innerHTML = Storage.getEmployees().map(e=>`<option>${e}</option>`).join('');
+    }
+
+    // Estado de calendario
     let viewDate = new Date();
     let selected = new Date();
     if(dateEl) dateEl.valueAsDate = selected;
@@ -76,19 +91,20 @@
 
     drawCalendar();
 
+    // Guardar / actualizar
     form.addEventListener('submit',(e)=>{
       e.preventDefault();
       const appt = {
         id: idEl.value || null,
-        name: clientName.value.trim(),
-        phone: clientPhone.value.trim(),
-        service: service.value.trim(),
+        name: nameEl.value.trim(),
+        phone: phoneEl.value.trim(),
+        service: serviceEl.value.trim(),
         employee: empSel.value,
-        notes: (notes.value||'').trim(),
-        price: Number(price.value||0),
-        date: (date.value||'').slice(0,10),
-        time: (time.value||'').slice(0,5),
-        duration: Number(duration.value||60),
+        notes: (notesEl.value||'').trim(),
+        price: Number(priceEl.value||0),
+        date: (dateEl.value||'').slice(0,10),
+        time: (timeEl.value||'').slice(0,5),
+        duration: Number(durationEl.value||60),
         source: 'admin'
       };
       if(!Storage.canSchedule(appt)){
@@ -104,6 +120,7 @@
       const dd=(dateEl && dateEl.value) ? dateEl.value.slice(0,10) : new Date().toISOString().slice(0,10);
       const all = Storage.listAppointments();
       const today = all.filter(a=>a.date===dd);
+
       dayList.innerHTML = today.map(renderItem).join('') || '<p class="muted">No hay citas.</p>';
       allList.innerHTML = all.map(renderItem).join('') || '<p class="muted">Aún sin citas.</p>';
     }
@@ -129,28 +146,27 @@
         </div>
         <div class="row">
           <a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a>
-          <button class="btn" onclick="Storage.__edit('${a.id}')">✏️</button>
+          <button class="btn" onclick="App.editAppointment('${a.id}')">✏️</button>
         </div>
       </div>`;
     }
 
-    // API para botón editar
-    window.Storage.__edit = (id)=>{
+    // Exponer handler global seguro para los botones de edición
+    window.App.editAppointment = (id)=>{
       const a = Storage.getAppointment(id); if(!a) return;
       idEl.value = a.id;
-      clientName.value = a.name;
-      clientPhone.value = a.phone;
-      service.value = a.service;
-      price.value = a.price;
+      nameEl.value = a.name;
+      phoneEl.value = a.phone;
+      serviceEl.value = a.service;
+      priceEl.value = a.price;
       dateEl.value = a.date;
-      time.value = a.time;
-      duration.value = a.duration;
-      notes.value = a.notes || '';
-      empSel.value = a.employee || Storage.getEmployees()[0];
+      timeEl.value = a.time;
+      durationEl.value = a.duration;
+      notesEl.value = a.notes || '';
+      if (empSel && a.employee) empSel.value = a.employee;
       btnSave.textContent = 'Actualizar cita';
       btnCancel.style.display = 'inline-block';
-      // enfocar
-      clientName.focus();
+      nameEl.focus();
     };
 
     function resetEdit(){
@@ -163,20 +179,23 @@
     btnCancel.addEventListener('click', resetEdit);
 
     refresh();
+
     const btnLogout = document.getElementById('btnLogout');
     if(btnLogout){ btnLogout.onclick = ()=> location.href='index.html'; }
   }
 
-  // Settings (marca, WA, VIP y empleados)
+  // --- Settings (marca, WA, VIP y empleados) ---
   function wireSettings(){
     const tc = document.getElementById('themeColor');
     if(!tc) return;
 
     Storage.applyBranding();
 
+    // Color
     tc.value = Storage.getThemeColor();
     tc.oninput = ()=> Storage.setThemeColor(tc.value);
 
+    // Logo/fondo
     const logoInput = document.getElementById('logoInput');
     if(logoInput){
       logoInput.onchange = async (e)=>{
@@ -194,16 +213,17 @@
       };
     }
 
+    // WhatsApp template
     const waTemplate = document.getElementById('waTemplate');
     waTemplate.value = Storage.getWhatsAppTemplate();
     waTemplate.addEventListener('input', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
     waTemplate.addEventListener('change', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
 
+    // VIP
     const vipToken = document.getElementById('vipToken');
     const btnGenVip = document.getElementById('btnGenVip');
     const btnShareVip = document.getElementById('btnShareVip');
     const preview = document.getElementById('vipLinkPreview');
-
     const renderPreview = ()=>{
       const url = new URL('vip.html', location.href);
       url.searchParams.set('t', Storage.ensureVipToken());
@@ -211,7 +231,6 @@
     };
     if(vipToken){ vipToken.value = Storage.ensureVipToken(); }
     renderPreview();
-
     if(btnGenVip){
       btnGenVip.onclick = ()=>{ 
         vipToken.value = Storage.ensureVipToken(); 
@@ -239,27 +258,29 @@
       empList.innerHTML=Storage.getEmployees().map(e=>`
         <div class="row">
           <span>${e}</span>
-          <button class="btn" onclick="Storage.__rename('${e}')">✏️</button>
-          <button class="btn" onclick="Storage.__remove('${e}')">🗑️</button>
+          <button class="btn" onclick="App.renameEmployee('${e.replace(/'/g,"\\'")}')">✏️</button>
+          <button class="btn" onclick="App.removeEmployee('${e.replace(/'/g,"\\'")}')">🗑️</button>
         </div>`).join('');
     };
-    window.Storage.__rename=(oldN)=>{
+
+    // Exponer handlers globales seguros
+    window.App.renameEmployee = (oldN)=>{
       const nn=prompt('Nuevo nombre para '+oldN,oldN);
       if(nn&&nn.trim()){Storage.renameEmployee(oldN,nn.trim()); renderEmp();}
     };
-    window.Storage.__remove=(n)=>{
+    window.App.removeEmployee = (n)=>{
       if(confirm('Eliminar '+n+'?')){ Storage.deleteEmployee(n); renderEmp(); }
     };
+
     addEmp.onclick=()=>{
-      if(newEmp.value.trim()){
-        Storage.addEmployee(newEmp.value.trim());
-        newEmp.value=''; renderEmp();
-      }
+      const v=newEmp.value.trim();
+      if(v){ Storage.addEmployee(v); newEmp.value=''; renderEmp(); }
     };
+
     renderEmp();
   }
 
-  // VIP
+  // --- VIP (solo validación; resto en vip.html inline) ---
   function wireVip(){
     const isVip = !!document.getElementById('vipForm');
     if(!isVip) return;
