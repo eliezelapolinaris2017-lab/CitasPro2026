@@ -12,7 +12,7 @@
       <img id="brandLogo" class="logo" src="assets/default-logo.svg" alt="logo" />
       <div>
         <h1>Configuración</h1>
-        <small class="muted">Marca, WhatsApp y enlace VIP</small>
+        <small class="muted">Marca, WhatsApp, enlace VIP y empleados</small>
       </div>
     </div>
     <nav class="top-actions">
@@ -41,13 +41,19 @@
           <button id="btnGenVip" class="btn">Generar</button>
         </div>
       </label>
-
       <div class="row">
         <button id="btnShareVip" class="btn ghost">Copiar enlace VIP</button>
       </div>
-
       <div class="row">
         <small id="vipLinkPreview" class="muted" style="word-break:break-all"></small>
+      </div>
+
+      <hr>
+      <h3>Gestión de Empleados</h3>
+      <div id="empList" class="stack"></div>
+      <div class="row">
+        <input id="newEmp" placeholder="Nuevo empleado">
+        <button id="addEmp" class="btn primary">Agregar</button>
       </div>
     </div>
   </main>
@@ -58,4 +64,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
