@@ -1,5 +1,4 @@
 (function(){
-  // ===== Helpers =====
   function fmtDateShort(iso){ 
     if(!iso || iso.length < 10) return iso || '';
     const [y,m,d] = iso.slice(0,10).split('-');
@@ -14,7 +13,6 @@
     wireVip();
   });
 
-  // -------- Login (index.html) --------
   function wireLogin(){
     const form = document.getElementById('loginForm');
     if(!form) return;
@@ -28,7 +26,6 @@
     });
   }
 
-  // -------- Dashboard (dashboard.html) --------
   function wireDashboard(){
     const isDashboard = !!document.getElementById('appointments');
     if(!isDashboard) return;
@@ -76,12 +73,21 @@
           name: document.getElementById('clientName').value.trim(),
           phone: document.getElementById('clientPhone').value.trim(),
           service: document.getElementById('service').value.trim(),
+          employee: document.getElementById('employee').value,
+          notes: (document.getElementById('notes').value||'').trim(),
           price: Number(document.getElementById('price').value||0),
           date: (document.getElementById('date').value || '').slice(0,10),
           time: (document.getElementById('time').value || '').slice(0,5),
           duration: Number(document.getElementById('duration').value||60),
           source: 'admin'
         };
+
+        // Validar choque por empleado
+        if(!Storage.canSchedule(appt)){
+          alert('Ese horario ya está ocupado para ' + appt.employee + '. Elige otra hora o empleado.');
+          return;
+        }
+
         Storage.saveAppointment(appt);
         appointmentForm.reset();
         if(dateEl) dateEl.valueAsDate = selected;
@@ -114,7 +120,12 @@
       return `<div class="item">
         <div>
           <strong>${a.time}</strong> — ${a.name} · ${a.service}
-          <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
+          <div class="tags">
+            <span class="tag">${a.duration}m</span>
+            <span class="tag">$${a.price}</span>
+            <span class="tag">${a.employee||'—'}</span>
+            ${a.source==='vip'?'<span class="tag">VIP</span>':''}
+          </div>
         </div>
         <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
       </div>`;
@@ -132,7 +143,12 @@
       return `<div class="item">
         <div>
           <strong>${fechaHora}</strong> — ${a.name} · ${a.service}
-          <div class="tags"><span class="tag">${a.duration}m</span><span class="tag">$${a.price}</span>${a.source==='vip'?'<span class="tag">VIP</span>':''}</div>
+          <div class="tags">
+            <span class="tag">${a.duration}m</span>
+            <span class="tag">$${a.price}</span>
+            <span class="tag">${a.employee||'—'}</span>
+            ${a.source==='vip'?'<span class="tag">VIP</span>':''}
+          </div>
         </div>
         <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
       </div>`;
@@ -144,18 +160,15 @@
     if(btnLogout){ btnLogout.onclick = ()=> location.href='index.html'; }
   }
 
-  // -------- Settings (settings.html) --------
   function wireSettings(){
     const tc = document.getElementById('themeColor');
-    if(!tc) return; // no estamos en settings
+    if(!tc) return;
 
     Storage.applyBranding();
 
-    // Color
     tc.value = Storage.getThemeColor();
     tc.oninput = ()=> Storage.setThemeColor(tc.value);
 
-    // Logo y fondo
     const logoInput = document.getElementById('logoInput');
     if(logoInput){
       logoInput.onchange = async (e)=>{
@@ -173,13 +186,11 @@
       };
     }
 
-    // WhatsApp template
     const waTemplate = document.getElementById('waTemplate');
     waTemplate.value = Storage.getWhatsAppTemplate();
     waTemplate.addEventListener('input', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
     waTemplate.addEventListener('change', ()=> Storage.setWhatsAppTemplate(waTemplate.value));
 
-    // VIP token y enlace funcional
     const vipToken = document.getElementById('vipToken');
     const btnGenVip = document.getElementById('btnGenVip');
     const btnShareVip = document.getElementById('btnShareVip');
@@ -194,12 +205,12 @@
     if(vipToken){ vipToken.value = Storage.ensureVipToken(); }
     renderPreview();
 
-    if(btnGenVip){ 
+    if(btnGenVip){
       btnGenVip.onclick = ()=>{ 
         vipToken.value = Storage.ensureVipToken(); 
         alert('Token generado'); 
         renderPreview(); 
-      }; 
+      };
     }
 
     if(btnShareVip){
@@ -217,7 +228,6 @@
     }
   }
 
-  // -------- VIP (vip.html) --------
   function wireVip(){
     const isVip = !!document.getElementById('vipForm');
     if(!isVip) return;
@@ -247,14 +257,21 @@
         name: document.getElementById('vipName').value.trim(),
         phone: document.getElementById('vipPhone').value.trim(),
         service: document.getElementById('vipService').value.trim(),
+        employee: document.getElementById('vipEmployee').value,
         date: (document.getElementById('vipDate').value || '').slice(0,10),
         time: (document.getElementById('vipTime').value || '').slice(0,5),
         duration: Number(document.getElementById('vipDuration').value||60),
         price: 0,
         source: 'vip'
       };
+
+      if(!Storage.canSchedule(appt)){
+        alert('Ese horario ya está ocupado para ' + appt.employee + '. Elige otra hora o empleado.');
+        return;
+      }
+
       Storage.saveAppointment(appt);
-      if(msgBox) msgBox.textContent = '¡Listo! Tu cita quedó registrada.';
+      if(msgBox) msg.textContent = '¡Listo! Tu cita quedó registrada.';
       form.reset();
     });
   }
