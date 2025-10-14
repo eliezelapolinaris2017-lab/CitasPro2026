@@ -24,8 +24,10 @@
     <h2>Auto-agenda VIP</h2>
     <p class="muted">Selecciona fecha, hora y el empleado</p>
 
+    <!-- Calendario -->
     <div id="calendar" class="calendar" aria-label="Calendario de reservas"></div>
 
+    <!-- Formulario VIP -->
     <form id="vipForm" class="stack" style="max-width:520px;margin:auto;">
       <input id="vipName" placeholder="Tu nombre" required>
       <input id="vipPhone" placeholder="WhatsApp (con código de país)" required>
@@ -45,11 +47,16 @@
 
   <footer class="foot">Hecho con ❤ — CitasPro</footer>
 
+  <!-- Scripts -->
   <script src="storage.js"></script>
   <script src="calendar.js"></script>
+  <script src="app.js"></script>
   <script>
   (function(){
+    // Branding
     Storage.bootstrapUI();
+
+    // Validar token VIP
     const q = new URLSearchParams(location.search);
     const token = q.get('t');
     if(!Storage.validateVip(token)){
@@ -62,28 +69,36 @@
     const selEmp = document.getElementById('vipEmployee');
     selEmp.innerHTML = Storage.getEmployees().map(e=>`<option>${e}</option>`).join('');
 
+    // Calendario con contador de citas por día
     const cal = document.getElementById('calendar');
     let selected = new Date();
-
     function drawCalendar(){
       renderCalendar(
         cal,
         selected,
-        (d)=>{ selected=d; const vipDate=document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate=d; },
-        (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length
+        (d)=>{ 
+          selected = d; 
+          const vipDate=document.getElementById('vipDate'); 
+          if(vipDate) vipDate.valueAsDate=d; 
+        },
+        (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length,
+        selected
       );
     }
     drawCalendar();
 
+    // Preseleccionar fecha de hoy
     const vipDate = document.getElementById('vipDate'); 
     if(vipDate) vipDate.valueAsDate = selected;
 
+    // Envío de reserva VIP
     const form = document.getElementById('vipForm');
     const msgBox = document.getElementById('vipMsg');
 
-    form.addEventListener('submit', (e)=>{
+    form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       const appt = {
+        id: null, // se asigna al guardar
         name: document.getElementById('vipName').value.trim(),
         phone: document.getElementById('vipPhone').value.trim(),
         service: document.getElementById('vipService').value.trim(),
@@ -92,29 +107,30 @@
         time: (document.getElementById('vipTime').value || '').slice(0,5),
         duration: Number(document.getElementById('vipDuration').value||60),
         price: 0,
+        notes: '',
         source: 'vip'
       };
 
+      // Anti-choques por empleado
       if(!Storage.canSchedule(appt)){
         alert('Ese horario ya está ocupado para ' + appt.employee + '. Elige otra hora o empleado.');
         return;
       }
 
-      Storage.saveAppointment(appt);
+      // Guardar local
+      const saved = Storage.saveAppointment(appt);
+
+      // Sincronizar con Google Calendar (usa configuración en settings)
+      if (window.AppPush) {
+        try { await AppPush(saved); } catch(e){ console.warn('No se pudo sincronizar con Google Calendar', e); }
+      }
+
       if(msgBox) msgBox.textContent = '¡Listo! Tu cita quedó registrada.';
       form.reset();
-      drawCalendar();
+      if(vipDate) vipDate.valueAsDate = selected;
+      drawCalendar(); // refrescar contadores
     });
   })();
   </script>
 </body>
 </html>
-Storage.saveAppointment(appt);
-
-// 🔗 sincroniza con Google Calendar
-if (window.AppPush) { AppPush(appt); }
-
-if(msgBox) msgBox.textContent = '¡Listo! Tu cita quedó registrada.';
-form.reset();
-drawCalendar();
-
