@@ -1,6 +1,6 @@
 const Storage = {
   key: 'citaspro.db',
-  isBackend: false, // pon true si usas el backend Java
+  isBackend: false,
   BASE_URL: 'http://localhost:4567',
 
   _db(){
@@ -17,8 +17,6 @@ const Storage = {
   },
   _save(db){ localStorage.setItem(this.key, JSON.stringify(db)); },
 
-  ensureDemoAdmin(){ const db = this._db(); if(!db.user) db.user={email:'admin@example.com', pass:'admin'}; this._save(db); },
-
   async login(email, pass){
     if(this.isBackend){
       const r = await fetch(this.BASE_URL+'/api/login',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, pass})});
@@ -26,6 +24,27 @@ const Storage = {
     } else {
       const db = this._db();
       return email===db.user.email && pass===db.user.pass;
+    }
+  },
+
+  // --- Choques por empleado (intervalos de tiempo) ---
+  canSchedule(appt){
+    const db = this._db();
+    const sameDay = db.appointments.filter(a => a.date === appt.date && (a.employee||'') === (appt.employee||''));
+    if(sameDay.length === 0) return true;
+
+    const start = toMinutes(appt.time);
+    const end   = start + (Number(appt.duration)||60);
+    return !sameDay.some(a=>{
+      const s = toMinutes(a.time);
+      const e = s + (Number(a.duration)||60);
+      // se superpone si max(inicio) < min(fin)
+      return Math.max(start, s) < Math.min(end, e);
+    });
+
+    function toMinutes(hhmm){
+      const [h,m] = (hhmm||'00:00').split(':').map(Number);
+      return h*60 + (m||0);
     }
   },
 
