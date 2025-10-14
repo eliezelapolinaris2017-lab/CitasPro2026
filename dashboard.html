@@ -1,81 +1,33 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CitasPro — Panel</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body class="bg">
-  <header class="topbar">
-    <div class="brand">
-      <img id="brandLogo" class="logo" src="assets/default-logo.svg" alt="logo" />
-      <div>
-        <h1 id="brandTitle">CitasPro</h1>
-        <small class="muted">Agenda y Auto-agenda VIP</small>
-      </div>
-    </div>
-    <nav class="top-actions">
-      <a class="btn ghost" href="settings.html">Configuración</a>
-      <button id="btnLogout" class="btn">Salir</button>
-    </nav>
-  </header>
+<form id="appointmentForm" class="stack">
+  <h3>Nueva / Editar cita</h3>
+  <input type="hidden" id="apptId">
+  <div class="row">
+    <input id="clientName" placeholder="Nombre del cliente" required>
+    <input id="clientPhone" placeholder="WhatsApp (con código país)" required>
+  </div>
+  <div class="row">
+    <input id="service" placeholder="Servicio" required>
+    <input id="price" type="number" min="0" placeholder="Precio" required>
+  </div>
+  <div class="row">
+    <input id="date" type="date" required>
+    <input id="time" type="time" required>
+    <select id="duration">
+      <option value="30">30 min</option>
+      <option value="60" selected>60 min</option>
+      <option value="90">90 min</option>
+    </select>
+  </div>
+  <div class="row">
+    <select id="employee" required></select>
+    <input id="notes" placeholder="Notas (opcional)">
+  </div>
+  <button class="btn primary" type="submit">Guardar cita</button>
+</form>
 
-  <main class="grid">
-    <!-- Columna izquierda: Calendario y crear cita -->
-    <section class="card">
-      <h2>Agenda</h2>
-      <div class="cal-header">
-        <button id="calPrev" class="btn">←</button>
-        <div id="calLabel" class="cal-label">Mes Año</div>
-        <button id="calNext" class="btn">→</button>
-      </div>
-      <div id="calendar" class="calendar"></div>
+<div class="list" id="dayList"></div>
 
-      <form id="appointmentForm" class="stack">
-        <h3>Nueva cita</h3>
-        <div class="row">
-          <input id="clientName" placeholder="Nombre del cliente" required>
-          <input id="clientPhone" placeholder="WhatsApp (con código país)" required>
-        </div>
-        <div class="row">
-          <input id="service" placeholder="Servicio (ej. Makeup)" required>
-          <input id="price" type="number" min="0" placeholder="Precio" required>
-        </div>
-        <div class="row">
-          <input id="date" type="date" required>
-          <input id="time" type="time" required>
-          <select id="duration">
-            <option value="30">30 min</option>
-            <option value="60" selected>60 min</option>
-            <option value="90">90 min</option>
-          </select>
-        </div>
-        <div class="row">
-          <select id="employee" required>
-            <option value="Empleado 1">Empleado 1</option>
-            <option value="Empleado 2">Empleado 2</option>
-            <option value="Empleado 3">Empleado 3</option>
-          </select>
-          <input id="notes" placeholder="Notas (opcional)">
-        </div>
-        <button class="btn primary" type="submit">Guardar cita</button>
-      </form>
-
-      <div class="list" id="dayList"></div>
-    </section>
-
-    <!-- Columna derecha: Mis citas -->
-    <section class="card">
-      <h2>Mis citas</h2>
-      <div id="appointments" class="list"></div>
-    </section>
-  </main>
-
-  <footer class="foot">Hecho con ❤ — CitasPro</footer>
-
-  <script src="storage.js"></script>
-  <script src="calendar.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+<section class="card">
+  <h2>Mis citas</h2>
+  <div id="appointments" class="list"></div>
+</section>
