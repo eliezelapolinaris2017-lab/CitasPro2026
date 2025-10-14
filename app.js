@@ -1,4 +1,5 @@
 (function(){
+  // Helpers
   function fmtDateShort(iso){ 
     if(!iso || iso.length < 10) return iso || '';
     const [y,m,d] = iso.slice(0,10).split('-');
@@ -13,6 +14,7 @@
     wireVip();
   });
 
+  // Login
   function wireLogin(){
     const form = document.getElementById('loginForm');
     if(!form) return;
@@ -26,6 +28,7 @@
     });
   }
 
+  // Dashboard (crear/editar citas)
   function wireDashboard(){
     const isDashboard = !!document.getElementById('appointments');
     if(!isDashboard) return;
@@ -33,18 +36,25 @@
     Storage.applyBranding();
 
     const cal = document.getElementById('calendar');
-    const appointmentForm = document.getElementById('appointmentForm');
+    const form = document.getElementById('appointmentForm');
+    const idEl = document.getElementById('apptId');
     const dateEl = document.getElementById('date');
     const dayList = document.getElementById('dayList');
     const allList = document.getElementById('appointments');
+    const empSel = document.getElementById('employee');
+    const btnCancel = document.getElementById('btnCancelEdit');
+    const btnSave = document.getElementById('btnSave');
+
+    // empleados dinámicos
+    Storage.ensureEmployees();
+    empSel.innerHTML = Storage.getEmployees().map(e=>`<option>${e}</option>`).join('');
 
     let viewDate = new Date();
     let selected = new Date();
     if(dateEl) dateEl.valueAsDate = selected;
 
     function labelMonthES(d){
-      return d.toLocaleDateString('es-ES', { month:'long', year:'numeric' })
-              .replace(/^\w/, c=>c.toUpperCase());
+      return d.toLocaleDateString('es-ES', { month:'long', year:'numeric' }).replace(/^\w/, c=>c.toUpperCase());
     }
 
     function drawCalendar(){
@@ -52,7 +62,7 @@
       renderCalendar(cal, viewDate, (d)=>{
         selected = d;
         if(dateEl) dateEl.valueAsDate = d;
-        refreshLists();
+        refresh();
         drawCalendar();
       }, getCount, selected);
       const lab = document.getElementById('calLabel');
@@ -66,72 +76,39 @@
 
     drawCalendar();
 
-    if(appointmentForm){
-      appointmentForm.addEventListener('submit', (e)=>{
-        e.preventDefault();
-        const appt = {
-          name: document.getElementById('clientName').value.trim(),
-          phone: document.getElementById('clientPhone').value.trim(),
-          service: document.getElementById('service').value.trim(),
-          employee: document.getElementById('employee').value,
-          notes: (document.getElementById('notes').value||'').trim(),
-          price: Number(document.getElementById('price').value||0),
-          date: (document.getElementById('date').value || '').slice(0,10),
-          time: (document.getElementById('time').value || '').slice(0,5),
-          duration: Number(document.getElementById('duration').value||60),
-          source: 'admin'
-        };
+    form.addEventListener('submit',(e)=>{
+      e.preventDefault();
+      const appt = {
+        id: idEl.value || null,
+        name: clientName.value.trim(),
+        phone: clientPhone.value.trim(),
+        service: service.value.trim(),
+        employee: empSel.value,
+        notes: (notes.value||'').trim(),
+        price: Number(price.value||0),
+        date: (date.value||'').slice(0,10),
+        time: (time.value||'').slice(0,5),
+        duration: Number(duration.value||60),
+        source: 'admin'
+      };
+      if(!Storage.canSchedule(appt)){
+        alert('Ese horario ya está ocupado para ' + appt.employee + '. Elige otra hora o empleado.');
+        return;
+      }
+      Storage.saveOrUpdateAppointment(appt);
+      resetEdit();
+      refresh(); drawCalendar();
+    });
 
-        // Validar choque por empleado
-        if(!Storage.canSchedule(appt)){
-          alert('Ese horario ya está ocupado para ' + appt.employee + '. Elige otra hora o empleado.');
-          return;
-        }
-
-        Storage.saveAppointment(appt);
-        appointmentForm.reset();
-        if(dateEl) dateEl.valueAsDate = selected;
-        refreshLists();
-        drawCalendar();
-      });
-    }
-
-    function refreshLists(){
-      const dd = (dateEl && dateEl.value) ? dateEl.value.slice(0,10) : new Date().toISOString().slice(0,10);
+    function refresh(){
+      const dd=(dateEl && dateEl.value) ? dateEl.value.slice(0,10) : new Date().toISOString().slice(0,10);
       const all = Storage.listAppointments();
-      const today = all.filter(a => a.date === dd);
-
-      if(dayList){
-        dayList.innerHTML = today.map(renderItemDay).join('') || '<p class="muted">No hay citas.</p>';
-      }
-      if(allList){
-        allList.innerHTML = all.map(renderItemAll).join('') || '<p class="muted">Aún sin citas.</p>';
-      }
+      const today = all.filter(a=>a.date===dd);
+      dayList.innerHTML = today.map(renderItem).join('') || '<p class="muted">No hay citas.</p>';
+      allList.innerHTML = all.map(renderItem).join('') || '<p class="muted">Aún sin citas.</p>';
     }
 
-    function renderItemDay(a){
-      const msg = Storage.getWhatsAppTemplate()
-        .replace('{{nombre}}', a.name)
-        .replace('{{fecha}}', a.date)
-        .replace('{{hora}}', a.time)
-        .replace('{{servicio}}', a.service)
-        .replace('{{precio}}', a.price);
-      const wa = `https://wa.me/${encodeURIComponent(a.phone)}?text=${encodeURIComponent(msg)}`;
-      return `<div class="item">
-        <div>
-          <strong>${a.time}</strong> — ${a.name} · ${a.service}
-          <div class="tags">
-            <span class="tag">${a.duration}m</span>
-            <span class="tag">$${a.price}</span>
-            <span class="tag">${a.employee||'—'}</span>
-            ${a.source==='vip'?'<span class="tag">VIP</span>':''}
-          </div>
-        </div>
-        <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
-      </div>`;
-    }
-
-    function renderItemAll(a){
+    function renderItem(a){
       const msg = Storage.getWhatsAppTemplate()
         .replace('{{nombre}}', a.name)
         .replace('{{fecha}}', a.date)
@@ -144,22 +121,53 @@
         <div>
           <strong>${fechaHora}</strong> — ${a.name} · ${a.service}
           <div class="tags">
+            <span class="tag">${a.employee||'—'}</span>
             <span class="tag">${a.duration}m</span>
             <span class="tag">$${a.price}</span>
-            <span class="tag">${a.employee||'—'}</span>
             ${a.source==='vip'?'<span class="tag">VIP</span>':''}
           </div>
         </div>
-        <div class="row"><a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a></div>
+        <div class="row">
+          <a class="btn ghost" target="_blank" href="${wa}">WhatsApp</a>
+          <button class="btn" onclick="Storage.__edit('${a.id}')">✏️</button>
+        </div>
       </div>`;
     }
 
-    refreshLists();
+    // API para botón editar
+    window.Storage.__edit = (id)=>{
+      const a = Storage.getAppointment(id); if(!a) return;
+      idEl.value = a.id;
+      clientName.value = a.name;
+      clientPhone.value = a.phone;
+      service.value = a.service;
+      price.value = a.price;
+      dateEl.value = a.date;
+      time.value = a.time;
+      duration.value = a.duration;
+      notes.value = a.notes || '';
+      empSel.value = a.employee || Storage.getEmployees()[0];
+      btnSave.textContent = 'Actualizar cita';
+      btnCancel.style.display = 'inline-block';
+      // enfocar
+      clientName.focus();
+    };
 
+    function resetEdit(){
+      form.reset();
+      idEl.value = '';
+      btnSave.textContent = 'Guardar cita';
+      btnCancel.style.display = 'none';
+      dateEl.valueAsDate = selected;
+    }
+    btnCancel.addEventListener('click', resetEdit);
+
+    refresh();
     const btnLogout = document.getElementById('btnLogout');
     if(btnLogout){ btnLogout.onclick = ()=> location.href='index.html'; }
   }
 
+  // Settings (marca, WA, VIP y empleados)
   function wireSettings(){
     const tc = document.getElementById('themeColor');
     if(!tc) return;
@@ -201,7 +209,6 @@
       url.searchParams.set('t', Storage.ensureVipToken());
       if(preview) preview.textContent = url.toString();
     };
-
     if(vipToken){ vipToken.value = Storage.ensureVipToken(); }
     renderPreview();
 
@@ -212,22 +219,47 @@
         renderPreview(); 
       };
     }
-
     if(btnShareVip){
       btnShareVip.onclick = async ()=>{
         const url = new URL('vip.html', location.href);
         url.searchParams.set('t', Storage.ensureVipToken());
         renderPreview();
-        try {
-          await navigator.clipboard.writeText(url.toString());
-          alert('Enlace VIP copiado: ' + url);
-        } catch {
-          alert('Tu enlace VIP: ' + url);
-        }
+        try { await navigator.clipboard.writeText(url.toString()); alert('Enlace VIP copiado: ' + url); }
+        catch { alert('Tu enlace VIP: ' + url); }
       };
     }
+
+    // Gestión de empleados
+    Storage.ensureEmployees();
+    const empList=document.getElementById('empList');
+    const addEmp=document.getElementById('addEmp');
+    const newEmp=document.getElementById('newEmp');
+
+    const renderEmp=()=>{
+      empList.innerHTML=Storage.getEmployees().map(e=>`
+        <div class="row">
+          <span>${e}</span>
+          <button class="btn" onclick="Storage.__rename('${e}')">✏️</button>
+          <button class="btn" onclick="Storage.__remove('${e}')">🗑️</button>
+        </div>`).join('');
+    };
+    window.Storage.__rename=(oldN)=>{
+      const nn=prompt('Nuevo nombre para '+oldN,oldN);
+      if(nn&&nn.trim()){Storage.renameEmployee(oldN,nn.trim()); renderEmp();}
+    };
+    window.Storage.__remove=(n)=>{
+      if(confirm('Eliminar '+n+'?')){ Storage.deleteEmployee(n); renderEmp(); }
+    };
+    addEmp.onclick=()=>{
+      if(newEmp.value.trim()){
+        Storage.addEmployee(newEmp.value.trim());
+        newEmp.value=''; renderEmp();
+      }
+    };
+    renderEmp();
   }
 
+  // VIP
   function wireVip(){
     const isVip = !!document.getElementById('vipForm');
     if(!isVip) return;
@@ -240,39 +272,5 @@
       document.body.innerHTML = '<main class="card"><h2>Enlace inválido</h2><p>Pide un enlace válido a tu negocio.</p><p><a class="btn" href="index.html">Ir al inicio</a></p></main>';
       return;
     }
-
-    const cal = document.getElementById('calendar');
-    let selected = new Date();
-    renderCalendar(cal, selected, (d)=>{ selected = d; const vipDate = document.getElementById('vipDate'); if(vipDate) vipDate.valueAsDate = d; },
-      (ymd)=> Storage.listAppointments().filter(a=>a.date===ymd).length
-    );
-    const vipDate = document.getElementById('vipDate'); 
-    if(vipDate) vipDate.valueAsDate = selected;
-
-    const form = document.getElementById('vipForm');
-    const msgBox = document.getElementById('vipMsg');
-    form.addEventListener('submit', (e)=>{
-      e.preventDefault();
-      const appt = {
-        name: document.getElementById('vipName').value.trim(),
-        phone: document.getElementById('vipPhone').value.trim(),
-        service: document.getElementById('vipService').value.trim(),
-        employee: document.getElementById('vipEmployee').value,
-        date: (document.getElementById('vipDate').value || '').slice(0,10),
-        time: (document.getElementById('vipTime').value || '').slice(0,5),
-        duration: Number(document.getElementById('vipDuration').value||60),
-        price: 0,
-        source: 'vip'
-      };
-
-      if(!Storage.canSchedule(appt)){
-        alert('Ese horario ya está ocupado para ' + appt.employee + '. Elige otra hora o empleado.');
-        return;
-      }
-
-      Storage.saveAppointment(appt);
-      if(msgBox) msg.textContent = '¡Listo! Tu cita quedó registrada.';
-      form.reset();
-    });
   }
 })();
