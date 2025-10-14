@@ -109,3 +109,12 @@
   </script>
 </body>
 </html>
+Storage.saveAppointment(appt);
+
+// 🔗 sincroniza con Google Calendar
+if (window.AppPush) { AppPush(appt); }
+
+if(msgBox) msgBox.textContent = '¡Listo! Tu cita quedó registrada.';
+form.reset();
+drawCalendar();
+
